@@ -124,4 +124,23 @@ describe('Brewfather Parser Regression Test', () => {
     expect(byId('COOLING_RECIRC').plannedDurationSec).toBe(20 * 60);
     expect(byId('KNOCKOUT_TRANSFER').plannedDurationSec).toBe(60 * 60);
   });
+
+  it('has one "heat off" (Boil), Sanitise loop last in Boil, and a recipe-driven whirlpool cool-to reminder', () => {
+    const recipeWithWhirlpool = {
+      ...testRecipe,
+      hops: [...testRecipe.hops, { name: 'Test Whirlpool Hop', amount: 50, use: 'Whirlpool', temp: 85 }],
+    } as unknown as BrewfatherRecipe;
+    const stages = parseBrewfatherRecipe(recipeWithWhirlpool);
+    const byId = (id: string) => stages.find(s => s.id === id)!;
+
+    const boil = byId('BOIL');
+    expect(boil.checklist.at(-1)?.id).toBe('hx-hot-sanitize');
+    expect(boil.checklist.at(-1)?.label).toBe('Sanitise loop');
+    expect(byId('COOLING_RECIRC').checklist.map(c => c.id)).not.toContain('hx-hot-sanitize');
+
+    const whirlpool = byId('HOPSTAND_WHIRLPOOL');
+    expect(whirlpool.checklist[0].label).toBe(`Cool to ${whirlpool.parameters.targetTemp}°C`);
+    const heatOffReminders = stages.flatMap(s => s.checklist).filter(c => /heat off/i.test(c.label));
+    expect(heatOffReminders.map(c => c.id)).toEqual(['steam-heat-off']);
+  });
 });

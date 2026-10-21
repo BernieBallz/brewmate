@@ -270,7 +270,8 @@ export function buildBoilStage(
     checklist: [
       { id: 'rolling-boil', label: 'Rolling boil', explanation: 'Confirm vigorous rolling boil established before starting timer', checked: false },
       { id: 'boil-additions-monitor', label: 'Additions', explanation: 'Check Additions tab for timed kettle hops, sugars, and finings', checked: false },
-      { id: 'steam-heat-off', label: 'Heat off at flameout', explanation: 'Cut kettle heating immediately at flameout', checked: false }
+      { id: 'steam-heat-off', label: 'Heat off at flameout', explanation: 'Cut kettle heating immediately at flameout', checked: false },
+      { id: 'hx-hot-sanitize', label: 'Sanitise loop', explanation: 'Recirculate hot wort through heat exchanger loop without cooling water', checked: false }
     ],
     parameters: {
       targetTemp: 100,
@@ -311,7 +312,7 @@ export function buildWhirlpoolStage(
     flow,
     additions: whirlpoolAdditions,
     checklist: [
-      { id: 'cut-heat', label: 'Heat off', explanation: 'Verify heating elements are fully turned off', checked: false },
+      { id: 'whirlpool-cool-temp', label: `Cool to ${hopstandTemp}°C`, explanation: 'Let the wort cool to whirlpool temperature before adding whirlpool hops (heat is already off from flameout)', checked: false },
       { id: 'whirlpool-additions', label: 'Whirlpool additions', explanation: 'Add aroma hopstand pellets/extract at designated whirlpool temp', checked: false },
       { id: 'vortex-spin', label: 'Spin', explanation: 'Run pump at full speed to create strong vortex, then shut pump off', checked: false },
       { id: 'settle-cone', label: 'Settle cone', explanation: 'Let kettle sit completely undisturbed to allow trub and hop cone to settle', checked: false }
@@ -351,7 +352,6 @@ export function buildCoolingRecircStage(
     flow,
     additions: [],
     checklist: [
-      { id: 'hx-hot-sanitize', label: 'Sanitise loop', explanation: 'Recirculate hot wort through heat exchanger loop without cooling water', checked: false },
       { id: 'cooling-medium-on', label: 'Cooling on', explanation: 'Open mains cooling supply valve to heat exchanger', checked: false },
       { id: 'temp-goal-60', label: 'Chill to 60°C', explanation: 'Monitor recirc temp until core kettle reaches target 60°C', checked: false },
       { id: 'transfer-line-prep', label: 'Transfer hose', explanation: 'Transfer hose from chiller outlet toward fermenter inlet', checked: false }

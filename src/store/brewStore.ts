@@ -1272,6 +1272,30 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
               stage.plannedDurationSec = update.estimateSec[1];
             }
           }
+
+          // Sanitise loop moved from Cooling Recirc to the end of the Boil (keeps its ticked state)
+          const boilStage = state.stages.find(s => s.id === 'BOIL');
+          const chillStage = state.stages.find(s => s.id === 'COOLING_RECIRC');
+          const sanitiseItem = chillStage?.checklist.find(c => c.id === 'hx-hot-sanitize');
+          if (boilStage && chillStage && sanitiseItem) {
+            chillStage.checklist = chillStage.checklist.filter(c => c.id !== 'hx-hot-sanitize');
+            if (!boilStage.checklist.some(c => c.id === 'hx-hot-sanitize')) {
+              boilStage.checklist = [...boilStage.checklist, sanitiseItem];
+            }
+          }
+
+          // Whirlpool "Heat off" duplicated the Boil's flameout reminder; it is now "Cool to <whirlpool temp>"
+          const whirlpoolStage = state.stages.find(s => s.id === 'HOPSTAND_WHIRLPOOL');
+          if (whirlpoolStage?.checklist.some(c => c.id === 'cut-heat')) {
+            whirlpoolStage.checklist = whirlpoolStage.checklist.map(c => c.id === 'cut-heat'
+              ? {
+                  ...c,
+                  id: 'whirlpool-cool-temp',
+                  label: `Cool to ${whirlpoolStage.parameters?.targetTemp ?? ''}°C`,
+                  explanation: 'Let the wort cool to whirlpool temperature before adding whirlpool hops (heat is already off from flameout)'
+                }
+              : c);
+          }
         }
       },
       partialize: (state) => ({
