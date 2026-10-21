@@ -1,19 +1,43 @@
 import React from 'react';
 import { useBrewStore } from '../store/brewStore';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Trash2 } from 'lucide-react';
+
+export type SessionClearMode = 'reset' | 'remove';
 
 interface ResetConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
+  // 'reset' restarts the current recipe; 'remove' clears the recipe and session from this device
+  mode?: SessionClearMode;
 }
 
-export const ResetConfirmModal: React.FC<ResetConfirmModalProps> = ({ isOpen, onClose }) => {
-  const { resetSession } = useBrewStore();
+const COPY: Record<SessionClearMode, { title: string; body: string; action: string }> = {
+  reset: {
+    title: 'Reset Brew Session?',
+    body: 'This will reset all timers, uncheck reminders, and restart from Stage 1 (Strike Water). Logged measurements will be cleared.',
+    action: 'Reset Session'
+  },
+  remove: {
+    title: 'Remove Recipe?',
+    body: 'This removes the recipe and its brew session from this device, including the session log and measurements, and returns to the start screen. Export the session report first if you want to keep it.',
+    action: 'Remove Recipe'
+  }
+};
+
+export const ResetConfirmModal: React.FC<ResetConfirmModalProps> = ({ isOpen, onClose, mode = 'reset' }) => {
+  const { resetSession, removeRecipe } = useBrewStore();
 
   if (!isOpen) return null;
 
-  const handleReset = () => {
-    resetSession();
+  const copy = COPY[mode];
+  const Icon = mode === 'remove' ? Trash2 : RotateCcw;
+
+  const handleConfirm = () => {
+    if (mode === 'remove') {
+      removeRecipe();
+    } else {
+      resetSession();
+    }
     onClose();
   };
 
@@ -23,24 +47,24 @@ export const ResetConfirmModal: React.FC<ResetConfirmModalProps> = ({ isOpen, on
         {/* Left Side: Warning Description */}
         <div className="flex-1 flex flex-col justify-center min-w-0 py-0.5">
           <div className="flex items-center justify-center sm:justify-start space-x-2 text-rose-400 mb-1">
-            <RotateCcw className="w-5 h-5 shrink-0" />
+            <Icon className="w-5 h-5 shrink-0" />
             <h3 className="text-base sm:text-lg font-black text-white leading-tight font-mono tracking-wide">
-              Reset Brew Session?
+              {copy.title}
             </h3>
           </div>
           <p className="text-xs text-gray-300 mt-1 leading-relaxed">
-            This will reset all timers, uncheck reminders, and restart from Stage 1 (Strike Water). Logged measurements will be cleared.
+            {copy.body}
           </p>
         </div>
 
         {/* Right Side: Action Buttons */}
         <div className="w-full sm:w-48 flex flex-col justify-center space-y-2 shrink-0">
           <button
-            onClick={handleReset}
+            onClick={handleConfirm}
             className="w-full py-3 px-4 rounded-xl bg-rose-950/60 hover:bg-rose-900/70 active:bg-rose-800/80 text-rose-300 hover:text-white border border-rose-500/60 hover:border-rose-400 font-mono font-black text-xs tracking-widest uppercase shadow-[0_0_20px_rgba(244,63,94,0.25)] transition-all touch-press active:scale-95 flex items-center justify-center space-x-2"
           >
-            <RotateCcw className="w-4 h-4 stroke-[2.5]" />
-            <span>RESET SESSION</span>
+            <Icon className="w-4 h-4 stroke-[2.5]" />
+            <span>{copy.action}</span>
           </button>
 
           <button

@@ -8,7 +8,7 @@ import { TaskAlertModal } from './components/TaskAlertModal';
 import { ConfirmAdvanceModal } from './components/ConfirmAdvanceModal';
 import { RecipeUploadModal } from './components/RecipeUploadModal';
 import { SessionAuditReportModal } from './components/SessionAuditReportModal';
-import { ResetConfirmModal } from './components/ResetConfirmModal';
+import { ResetConfirmModal, type SessionClearMode } from './components/ResetConfirmModal';
 import { MenuDrawer } from './components/MenuDrawer';
 import { NotificationSetupModal } from './components/NotificationSetupModal';
 import { WelcomeScreen } from './components/WelcomeScreen';
@@ -41,6 +41,12 @@ export function App() {
     setIsAdvanceModalOpen(true);
   };
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [sessionClearMode, setSessionClearMode] = useState<SessionClearMode>('reset');
+
+  const openSessionClearConfirm = (mode: SessionClearMode) => {
+    setSessionClearMode(mode);
+    setIsResetModalOpen(true);
+  };
   const [isAlertSetupOpen, setIsAlertSetupOpen] = useState(shouldAutoOpenAlertSetup);
 
   const closeAlertSetup = () => {
@@ -153,7 +159,8 @@ export function App() {
         onClose={() => setIsMenuDrawerOpen(false)}
         onOpenRecipeModal={() => setIsRecipeModalOpen(true)}
         onOpenReportModal={() => setIsReportModalOpen(true)}
-        onOpenResetConfirm={() => setIsResetModalOpen(true)}
+        onOpenResetConfirm={() => openSessionClearConfirm('reset')}
+        onOpenRemoveConfirm={() => openSessionClearConfirm('remove')}
         onConfirmJump={(stageIndex) => openAdvanceModal(stageIndex)}
       />
 
@@ -176,6 +183,7 @@ export function App() {
       <ResetConfirmModal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
+        mode={sessionClearMode}
       />
 
       <NotificationSetupModal

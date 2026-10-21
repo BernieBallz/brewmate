@@ -93,4 +93,28 @@ describe('Flow State Machine & Grainfather Track Regression Suite', () => {
       expect(navigator.mediaSession.metadata).toBeNull();
     }
   });
+
+  it('removeRecipe clears the recipe and session but keeps device preferences', () => {
+    useBrewStore.getState().setStrikeOffset(12);
+    useBrewStore.getState().toggleAudio();
+    const audioBefore = useBrewStore.getState().audioEnabled;
+    useBrewStore.getState().goToStage(2);
+    useBrewStore.getState().startTimer();
+
+    useBrewStore.getState().removeRecipe();
+
+    const s = useBrewStore.getState();
+    expect(s.recipe).toBeNull();
+    expect(s.stages).toEqual([]);
+    expect(s.currentStageIndex).toBe(0);
+    expect(s.timerStatus).toBe('idle');
+    expect(s.auditLogs).toEqual([]);
+    expect(s.measurements).toEqual({});
+    expect(s.strikeOffset).toBe(12);
+    expect(s.audioEnabled).toBe(audioBefore);
+
+    // Reset with no recipe is a no-op rather than an error
+    useBrewStore.getState().resetSession();
+    expect(useBrewStore.getState().stages).toEqual([]);
+  });
 });

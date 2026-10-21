@@ -4,6 +4,7 @@ import {
   FileText,
   FolderOpen,
   RotateCcw,
+  Trash2,
   Volume2,
   VolumeX,
   X,
@@ -29,6 +30,7 @@ interface MenuDrawerProps {
   onOpenRecipeModal: () => void;
   onOpenReportModal: () => void;
   onOpenResetConfirm: () => void;
+  onOpenRemoveConfirm: () => void;
   onConfirmJump: (stageIndex: number) => void;
 }
 
@@ -38,6 +40,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   onOpenRecipeModal,
   onOpenReportModal,
   onOpenResetConfirm,
+  onOpenRemoveConfirm,
   onConfirmJump
 }) => {
   const { 
@@ -177,6 +180,18 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
           >
             <RotateCcw className="w-4 h-4 stroke-[2.5]" />
             <span>Reset Session</span>
+          </button>
+
+          {/* Remove Recipe: clears the recipe and session from this device (back to the welcome screen) */}
+          <button
+            onClick={() => {
+              onOpenRemoveConfirm();
+              onClose();
+            }}
+            className="w-full flex items-center justify-center space-x-2 p-2 rounded-lg bg-transparent hover:bg-rose-950/40 text-rose-300/80 hover:text-rose-200 font-mono font-bold text-xs tracking-widest uppercase border border-rose-500/30 hover:border-rose-500/60 transition-all touch-press"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Remove Recipe</span>
           </button>
         </div>
 

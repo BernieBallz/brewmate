@@ -20,6 +20,7 @@ interface BrewStoreActions {
   // Initialization & Recipe
   loadRecipe: (recipe: BrewfatherRecipe) => void;
   resetSession: () => void;
+  removeRecipe: () => void;
 
   // Timer & Flow controls
   startTimer: () => void;
@@ -208,6 +209,37 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         if (currentRecipe) {
           get().loadRecipe(currentRecipe);
         }
+      },
+
+      // Clear the recipe and its whole session from this device; the app returns to the welcome screen.
+      // Device preferences (strike offset, audio, vibration) are kept.
+      removeRecipe: () => {
+        notificationManager.clearLiveTimerNotification();
+        if (get().wakeLockActive) {
+          void wakeLockManager.releaseLock();
+        }
+        set({
+          recipe: null,
+          sessionId: `brew-${Date.now()}`,
+          sessionStartTime: null,
+          sessionEndTime: null,
+          finishedAt: null,
+          currentStageIndex: 0,
+          stages: [],
+          measurements: {},
+          auditLogs: [],
+          timerStatus: 'idle',
+          timerRemainingSec: 0,
+          timerTotalSec: 0,
+          timerStartedAtWallClock: null,
+          timerAccumulatedElapsedSec: 0,
+          wakeLockActive: false,
+          activeAlertAdditions: [],
+          dismissedAdditionIds: [],
+          activeTaskAlert: null,
+          dismissedTaskAlertIds: [],
+          alertSnoozedUntil: {}
+        });
       },
 
       startTimer: () => {
