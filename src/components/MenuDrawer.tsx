@@ -10,6 +10,7 @@ import {
   X,
   ListOrdered,
   Sun,
+  ChevronDown,
   Download,
   RefreshCw,
   Sparkles
@@ -58,6 +59,8 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   const canInstall = useCanInstallApp();
   const updateReady = useAppUpdateReady();
   const [updateCheck, setUpdateCheck] = useState<'idle' | 'checking' | UpdateCheckResult>('idle');
+  // The drawer stays mounted while hidden, so this remembers open/closed for the rest of the visit
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -145,31 +148,6 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
             <span>Load Recipe</span>
           </button>
 
-          <button
-            onClick={toggleAudio}
-            className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"
-          >
-            {audioEnabled ? (
-              <>
-                <Volume2 className="w-4 h-4 text-emerald-400" />
-                <span>Audio Alarms (On)</span>
-              </>
-            ) : (
-              <>
-                <VolumeX className="w-4 h-4 text-rose-400" />
-                <span>Audio Alarms (Muted)</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={toggleWakeLock}
-            className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"
-          >
-            <Sun className={`w-4 h-4 ${wakeLockActive ? 'text-amber-400' : 'text-slate-500'}`} />
-            <span>Screen Wake Lock ({wakeLockActive ? 'Active' : 'Off'})</span>
-          </button>
-
           {/* Reset Session Button */}
           <button
             onClick={() => {
@@ -195,68 +173,109 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
           </button>
         </div>
 
-        {/* 4. App: install, updates and version */}
+        {/* 4. Advanced (collapsed by default): device settings, install, updates and version */}
         <div className="mt-4 pt-3 border-t border-slate-800 space-y-2 shrink-0">
-          <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider block mb-1">
-            App
-          </span>
+          <button
+            type="button"
+            onClick={() => setIsAdvancedOpen(open => !open)}
+            aria-expanded={isAdvancedOpen}
+            className="w-full flex items-center justify-between py-1 text-[10px] font-mono text-gray-400 hover:text-gray-200 uppercase tracking-wider transition-colors"
+          >
+            <span className="flex items-center space-x-1.5">
+              <span>Advanced</span>
+              {/* Points to "Reload to Update" inside while the section is closed */}
+              {updateReady && !isAdvancedOpen && (
+                <span className="w-2 h-2 rounded-full bg-cyan-400" title="Update ready" />
+              )}
+            </span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-          {canInstall && (
-            <button
-              onClick={() => void appLifecycle.promptInstall()}
-              className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/70 text-emerald-200 text-xs font-mono font-bold tracking-wider uppercase border border-emerald-500/50 transition-all touch-press"
-            >
-              <Download className="w-4 h-4 text-emerald-400" />
-              <span>Install BrewMate App</span>
-            </button>
-          )}
-
-          {updateReady ? (
-            <div className="p-2.5 rounded-lg bg-cyan-950/40 border border-cyan-500/50 space-y-2">
-              <span className="flex items-center space-x-1.5 text-[11px] font-mono font-bold text-cyan-300">
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span>A new version has downloaded</span>
-              </span>
+          {isAdvancedOpen && (
+            <>
               <button
-                onClick={() => appLifecycle.applyUpdate()}
-                disabled={timerStatus === 'running'}
-                className="w-full py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 text-xs font-mono font-black tracking-wider uppercase transition-all touch-press"
+                onClick={toggleAudio}
+                className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"
               >
-                Reload to Update
+                {audioEnabled ? (
+                  <>
+                    <Volume2 className="w-4 h-4 text-emerald-400" />
+                    <span>Audio Alarms (On)</span>
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="w-4 h-4 text-rose-400" />
+                    <span>Audio Alarms (Muted)</span>
+                  </>
+                )}
               </button>
-              {timerStatus === 'running' && (
-                <span className="block text-[10px] font-mono text-gray-400">
-                  Pause the timer first. The update applies anyway next time the app opens.
+
+              <button
+                onClick={toggleWakeLock}
+                className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"
+              >
+                <Sun className={`w-4 h-4 ${wakeLockActive ? 'text-amber-400' : 'text-slate-500'}`} />
+                <span>Screen Wake Lock ({wakeLockActive ? 'Active' : 'Off'})</span>
+              </button>
+
+              {canInstall && (
+                <button
+                  onClick={() => void appLifecycle.promptInstall()}
+                  className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/70 text-emerald-200 text-xs font-mono font-bold tracking-wider uppercase border border-emerald-500/50 transition-all touch-press"
+                >
+                  <Download className="w-4 h-4 text-emerald-400" />
+                  <span>Install BrewMate App</span>
+                </button>
+              )}
+
+              {updateReady ? (
+                <div className="p-2.5 rounded-lg bg-cyan-950/40 border border-cyan-500/50 space-y-2">
+                  <span className="flex items-center space-x-1.5 text-[11px] font-mono font-bold text-cyan-300">
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    <span>A new version has downloaded</span>
+                  </span>
+                  <button
+                    onClick={() => appLifecycle.applyUpdate()}
+                    disabled={timerStatus === 'running'}
+                    className="w-full py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 text-xs font-mono font-black tracking-wider uppercase transition-all touch-press"
+                  >
+                    Reload to Update
+                  </button>
+                  {timerStatus === 'running' && (
+                    <span className="block text-[10px] font-mono text-gray-400">
+                      Pause the timer first. The update applies anyway next time the app opens.
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    setUpdateCheck('checking');
+                    setUpdateCheck(await appLifecycle.checkForUpdate());
+                  }}
+                  disabled={updateCheck === 'checking'}
+                  className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all touch-press"
+                >
+                  <RefreshCw className={`w-4 h-4 text-cyan-400 ${updateCheck === 'checking' ? 'animate-spin' : ''}`} />
+                  <span>Check for Updates</span>
+                </button>
+              )}
+
+              {!updateReady && updateCheck !== 'idle' && updateCheck !== 'checking' && (
+                <span className="block text-[11px] font-mono text-gray-400 px-1">
+                  {updateCheck === 'latest'
+                    ? "You're on the latest version."
+                    : updateCheck === 'downloading'
+                      ? 'Downloading the new version…'
+                      : "Couldn't check right now. Updates still install when you reopen the app."}
                 </span>
               )}
-            </div>
-          ) : (
-            <button
-              onClick={async () => {
-                setUpdateCheck('checking');
-                setUpdateCheck(await appLifecycle.checkForUpdate());
-              }}
-              disabled={updateCheck === 'checking'}
-              className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all touch-press"
-            >
-              <RefreshCw className={`w-4 h-4 text-cyan-400 ${updateCheck === 'checking' ? 'animate-spin' : ''}`} />
-              <span>Check for Updates</span>
-            </button>
-          )}
 
-          {!updateReady && updateCheck !== 'idle' && updateCheck !== 'checking' && (
-            <span className="block text-[11px] font-mono text-gray-400 px-1">
-              {updateCheck === 'latest'
-                ? "You're on the latest version."
-                : updateCheck === 'downloading'
-                  ? 'Downloading the new version…'
-                  : "Couldn't check right now. Updates still install when you reopen the app."}
-            </span>
+              <span className="block text-[10px] font-mono text-gray-500 px-1">
+                Version {__APP_BUILD__.commit} · built {formatBuildTime(__APP_BUILD__.builtAt)}
+              </span>
+            </>
           )}
-
-          <span className="block text-[10px] font-mono text-gray-500 px-1">
-            Version {__APP_BUILD__.commit} · built {formatBuildTime(__APP_BUILD__.builtAt)}
-          </span>
         </div>
       </div>
     </div>
