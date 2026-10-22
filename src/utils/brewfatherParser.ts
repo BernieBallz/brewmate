@@ -58,7 +58,7 @@ export function buildWaterPrepStage(
     additions: [],
     checklist: [
       { id: 'strike-sparge-vol', label: `Liquor ${strikeWater ? `${strikeWater}L` : 'Per recipe'} / ${spargeWater ? `${spargeWater}L` : 'Per recipe'}`, explanation: 'Verify liquor volumes', checked: false },
-      { id: 'water-treat', label: 'Water salts', explanation: 'Add gypsum, calcium chloride, and acid into strike liquor', checked: false },
+      { id: 'water-treat', label: 'Water salts', explanation: 'Prepare water salts and acids then add to strike liquor', checked: false },
       { id: 'fv-cooler-on', label: 'FV cooling on', explanation: 'Switch on glycol chiller for fermenter to pre-cool', checked: false }
     ],
     parameters: {

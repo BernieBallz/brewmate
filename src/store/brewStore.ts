@@ -1255,6 +1255,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           if (waterPrep && waterPrep.flow?.startLabel === 'STRIKE READY') {
             waterPrep.flow.startLabel = 'DONE';
           }
+          const waterSalts = waterPrep?.checklist.find(c => c.id === 'water-treat');
+          if (waterSalts && waterSalts.explanation === 'Add gypsum, calcium chloride, and acid into strike liquor') {
+            waterSalts.explanation = 'Prepare water salts and acids then add to strike liquor';
+          }
           // Pitch's action button is now DONE (was YEAST IN), and Knockout's NEXT label follows it
           const yeastPitch = state.stages.find(s => s.id === 'YEAST_PITCH');
           if (yeastPitch && yeastPitch.flow?.startLabel === 'YEAST IN') {
