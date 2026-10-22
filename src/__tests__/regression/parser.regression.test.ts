@@ -54,7 +54,7 @@ describe('Brewfather Parser Regression Test', () => {
     expect(stages.find(s => s.id === 'BOIL')?.flow.startLabel).toBe('START BOIL');
     expect(stages.find(s => s.id === 'COOLING_RECIRC')?.flow.startLabel).toBe('START CHILL');
     expect(stages.find(s => s.id === 'KNOCKOUT_TRANSFER')?.flow.startLabel).toBe('START KNOCKOUT');
-    expect(stages.find(s => s.id === 'YEAST_PITCH')?.flow.startLabel).toBe('YEAST IN');
+    expect(stages.find(s => s.id === 'YEAST_PITCH')?.flow.startLabel).toBe('DONE');
     expect(stages.find(s => s.id === 'CLEANUP')?.flow.startLabel).toBe('FINISH BREW');
   });
 

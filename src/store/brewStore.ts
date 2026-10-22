@@ -1251,6 +1251,15 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           if (waterPrep && waterPrep.flow?.nextLabel === 'NEXT: GRAIN IN') {
             waterPrep.flow.nextLabel = 'NEXT: MASH IN';
           }
+          // Pitch's action button is now DONE (was YEAST IN), and Knockout's NEXT label follows it
+          const yeastPitch = state.stages.find(s => s.id === 'YEAST_PITCH');
+          if (yeastPitch && yeastPitch.flow?.startLabel === 'YEAST IN') {
+            yeastPitch.flow.startLabel = 'DONE';
+          }
+          const knockout = state.stages.find(s => s.id === 'KNOCKOUT_TRANSFER');
+          if (knockout && knockout.flow?.nextLabel === 'NEXT: YEAST IN') {
+            knockout.flow.nextLabel = 'NEXT: PITCH YEAST';
+          }
 
           // Short names now follow the timer screen's flow labels; stopwatch estimates are more realistic
           const legacyStageUpdates: Record<string, { title?: [string, string]; shortCode?: [string, string]; estimateSec?: [number, number] }> = {

@@ -377,7 +377,7 @@ export function buildKnockoutTransferStage(
     endAlert: 'Knockout complete',
     startLog: 'Knockout started',
     endLog: 'Knockout time stored',
-    nextLabel: 'NEXT: YEAST IN'
+    nextLabel: 'NEXT: PITCH YEAST'
   };
 
   return {
@@ -419,7 +419,7 @@ export function buildYeastPitchStage(
   const flow: FlowStep = {
     id: 'yeast-pitch-flow',
     kind: 'confirm',
-    startLabel: 'YEAST IN',
+    startLabel: 'DONE',
     endAlert: 'Pitch yeast',
     startLog: 'Yeast pitched',
     endLog: 'Yeast pitched',
