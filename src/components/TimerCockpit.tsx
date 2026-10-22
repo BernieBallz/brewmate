@@ -457,6 +457,10 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
         ) : currentStage?.id === 'WATER_PREP' ? (
           /* Case C: Strike Water (Confirm stage with horizontal compact stepper) */
           <div className="flex flex-col items-center justify-center py-0.5">
+            {/* Same tick + title header as the other confirm stages (Case D) */}
+            <CheckCircle2 className="w-8 h-8 text-emerald-400 mb-1" />
+            <h3 className="text-sm sm:text-base font-bold text-gray-100 mb-2">{currentStage?.title}</h3>
+
             <div className="text-[11px] font-mono text-amber-400 font-bold uppercase tracking-wider mb-1 flex items-center space-x-1">
               <Thermometer className="w-3.5 h-3.5 mr-1" />
               <span>Mash {mashTemp}°C + Offset {strikeOffset >= 0 ? `+${strikeOffset}` : strikeOffset}°C</span>

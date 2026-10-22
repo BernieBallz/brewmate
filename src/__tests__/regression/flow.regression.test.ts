@@ -12,9 +12,9 @@ describe('Flow State Machine & Grainfather Track Regression Suite', () => {
     const store = useBrewStore.getState();
     expect(store.currentStageIndex).toBe(0);
     expect(store.stages[0].id).toBe('WATER_PREP');
-    expect(store.stages[0].flow.startLabel).toBe('STRIKE READY');
+    expect(store.stages[0].flow.startLabel).toBe('DONE');
 
-    // 1. STRIKE READY -> moves to MASH_IN
+    // 1. DONE (Strike Water) -> moves to MASH_IN
     useBrewStore.getState().confirmFlowStage();
     expect(useBrewStore.getState().currentStageIndex).toBe(1);
     expect(useBrewStore.getState().stages[1].id).toBe('MASH_IN');

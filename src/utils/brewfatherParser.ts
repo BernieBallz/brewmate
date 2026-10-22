@@ -36,7 +36,7 @@ export function buildWaterPrepStage(
   const flow: FlowStep = {
     id: 'strike-water-flow',
     kind: 'confirm',
-    startLabel: 'STRIKE READY',
+    startLabel: 'DONE',
     endAlert: 'Strike temp reached',
     startLog: 'Strike temp reached',
     endLog: `Strike offset +${strikeOffset}°C (mash ${mashTemp}°C → strike ${targetStrikeTemp}°C)`,

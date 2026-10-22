@@ -1251,6 +1251,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           if (waterPrep && waterPrep.flow?.nextLabel === 'NEXT: GRAIN IN') {
             waterPrep.flow.nextLabel = 'NEXT: MASH IN';
           }
+          // Strike Water's action button is now DONE (was STRIKE READY), like the other confirm stages
+          if (waterPrep && waterPrep.flow?.startLabel === 'STRIKE READY') {
+            waterPrep.flow.startLabel = 'DONE';
+          }
           // Pitch's action button is now DONE (was YEAST IN), and Knockout's NEXT label follows it
           const yeastPitch = state.stages.find(s => s.id === 'YEAST_PITCH');
           if (yeastPitch && yeastPitch.flow?.startLabel === 'YEAST IN') {

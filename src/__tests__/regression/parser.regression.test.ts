@@ -47,7 +47,7 @@ describe('Brewfather Parser Regression Test', () => {
     }
 
     // Verify Grainfather wording
-    expect(stages.find(s => s.id === 'WATER_PREP')?.flow.startLabel).toBe('STRIKE READY');
+    expect(stages.find(s => s.id === 'WATER_PREP')?.flow.startLabel).toBe('DONE');
     expect(stages.find(s => s.id === 'MASH_IN')?.flow.startLabel).toBe('DONE');
     expect(stages.find(s => s.id === 'MASH_SCHEDULE')?.flow.startLabel).toBe('START MASH REST');
     expect(stages.find(s => s.id === 'LAUTER_SPARGE')?.flow.startLabel).toBe('START SPARGE');
