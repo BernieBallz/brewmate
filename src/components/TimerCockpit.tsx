@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useBrewStore, getUnconfirmedAdditions } from '../store/brewStore';
+import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS, hasIncompleteStageItems } from '../store/brewStore';
 import { 
   Play, 
   Pause, 
@@ -57,11 +57,11 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
     endAlert: `${currentStage?.title || 'Stage'} complete!`
   };
 
-  // Moving on with additions still unconfirmed goes through the Complete Stage dialog, which lists them
-  const hasUnconfirmedAdditions = getUnconfirmedAdditions(currentStage).length > 0;
-  const guardAdvance = (advance: () => void) => () => (hasUnconfirmedAdditions ? onConfirmAdvance() : advance());
+  // Moving on with additions unconfirmed or reminders unticked goes through the Complete Stage dialog, which lists them
+  const hasIncompleteItems = hasIncompleteStageItems(currentStage);
+  const guardAdvance = (advance: () => void) => () => (hasIncompleteItems ? onConfirmAdvance() : advance());
 
-  const flowPhase = currentStage?.flowPhase ||(timerStatus === 'running' ? 'running' : timerStatus === 'paused' ? 'paused' : 'ready');
+  const flowPhase = currentStage?.flowPhase || (timerStatus === 'running' ? 'running' : timerStatus === 'paused' ? 'paused' : 'ready');
   const isSessionDone = finishedAt !== null || (currentStage?.id === 'CLEANUP' && currentStage?.status === 'completed');
 
   // Format MM:SS or HH:MM:SS
@@ -108,7 +108,7 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
   const elapsedSec = Math.max(0, Math.min(totalSec, totalSec - activeRemainingSec));
   const countdownProgressPct = flow.kind === 'countdown' ? Math.min(100, Math.max(0, (elapsedSec / totalSec) * 100)) : 0;
 
-  const additionReminderIds = ['mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+  const additionReminderIds = ADDITION_SUMMARY_CHECKLIST_IDS;
 
   // Check if additions in this stage are still pending
   const firstIncompleteChecklistItem = currentStage?.checklist?.find(c => {

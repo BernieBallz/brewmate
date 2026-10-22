@@ -1,5 +1,5 @@
 import React from 'react';
-import { useBrewStore, getUnconfirmedAdditions } from '../store/brewStore';
+import { useBrewStore, getUnconfirmedAdditions, getUncheckedReminders } from '../store/brewStore';
 import { AlertTriangle, Check, CheckCircle2 } from 'lucide-react';
 
 interface ConfirmAdvanceModalProps {
@@ -18,6 +18,8 @@ export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen
   const isJump = targetStageIndex !== null;
   const nextStageObj = stages[isJump ? targetStageIndex : currentStageIndex + 1];
   const unconfirmedAdditions = getUnconfirmedAdditions(currentStage);
+  const uncheckedReminders = getUncheckedReminders(currentStage);
+  const hasIncompleteItems = unconfirmedAdditions.length > 0 || uncheckedReminders.length > 0;
 
   const handleAdvance = () => {
     if (isJump) {
@@ -45,23 +47,44 @@ export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen
             </h3>
           </div>
 
-          {unconfirmedAdditions.length > 0 && (
-            <div className="mt-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/50 text-left">
-              <span className="flex items-center space-x-1.5 text-xs font-mono font-black text-amber-300 uppercase tracking-wider">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  {unconfirmedAdditions.length} addition{unconfirmedAdditions.length === 1 ? '' : 's'} not confirmed
-                </span>
-              </span>
-              <ul className="mt-1.5 space-y-0.5">
-                {unconfirmedAdditions.map(a => (
-                  <li key={a.id} className="text-xs text-gray-200 truncate">
-                    <span className="font-mono font-bold text-amber-300">{a.amount} {a.unit || 'g'}</span> {a.name}
-                  </li>
-                ))}
-              </ul>
-              <span className="text-[11px] text-gray-400 block mt-1.5">
-                Continuing leaves them unconfirmed in the brew log.
+          {hasIncompleteItems && (
+            <div className="mt-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/50 text-left space-y-2">
+              {unconfirmedAdditions.length > 0 && (
+                <div>
+                  <span className="flex items-center space-x-1.5 text-xs font-mono font-black text-amber-300 uppercase tracking-wider">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {unconfirmedAdditions.length} addition{unconfirmedAdditions.length === 1 ? '' : 's'} not confirmed
+                    </span>
+                  </span>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {unconfirmedAdditions.map(a => (
+                      <li key={a.id} className="text-xs text-gray-200 truncate">
+                        <span className="font-mono font-bold text-amber-300">{a.amount} {a.unit || 'g'}</span> {a.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {uncheckedReminders.length > 0 && (
+                <div>
+                  <span className="flex items-center space-x-1.5 text-xs font-mono font-black text-amber-300 uppercase tracking-wider">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {uncheckedReminders.length} reminder{uncheckedReminders.length === 1 ? '' : 's'} not ticked
+                    </span>
+                  </span>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {uncheckedReminders.map(c => (
+                      <li key={c.id} className="text-xs text-gray-200 truncate">• {c.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <span className="text-[11px] text-gray-400 block">
+                Continuing leaves them unfinished in the brew log.
               </span>
             </div>
           )}
@@ -100,7 +123,7 @@ export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen
             className="w-full py-3 sm:py-3.5 px-4 rounded-xl bg-sky-950/60 hover:bg-sky-900/70 active:bg-sky-800/80 text-sky-200 hover:text-white border border-sky-500/60 hover:border-sky-400 font-mono font-black text-xs sm:text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(56,189,248,0.25)] flex items-center justify-center space-x-2 transition-all touch-press active:scale-95"
           >
             <Check className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3] text-sky-400" />
-            <span>{unconfirmedAdditions.length > 0 ? 'CONTINUE ANYWAY' : 'COMPLETE STAGE'}</span>
+            <span>{hasIncompleteItems ? 'CONTINUE ANYWAY' : 'COMPLETE STAGE'}</span>
           </button>
 
           <button

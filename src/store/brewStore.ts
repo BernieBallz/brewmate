@@ -7,7 +7,8 @@ import type {
   SessionAuditLogItem,
   SessionMeasurements,
   TaskAlertPrompt,
-  BrewStage
+  BrewStage,
+  ChecklistItem
 } from '../types/session';
 import { parseBrewfatherRecipe } from '../utils/brewfatherParser';
 import { audioAlarm } from '../utils/audioAlarm';
@@ -68,9 +69,20 @@ export const ALERT_SNOOZE_MIN = 2;
 const isSnoozed = (snoozedUntil: Record<string, number> | undefined, id: string, now: number): boolean =>
   (snoozedUntil?.[id] ?? 0) > now;
 
+// Checklist items that summarise a stage's additions; they tick themselves once every addition is confirmed
+export const ADDITION_SUMMARY_CHECKLIST_IDS = ['mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+
 // Unconfirmed additions in a stage; used to warn before moving on
 export const getUnconfirmedAdditions = (stage: BrewStage | undefined): StageAddition[] =>
   stage?.additions?.filter(a => !a.confirmed) ?? [];
+
+// Unticked reminders in a stage, excluding the addition-summary items (the additions list already covers them)
+export const getUncheckedReminders = (stage: BrewStage | undefined): ChecklistItem[] =>
+  stage?.checklist?.filter(c => !c.checked && !ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)) ?? [];
+
+// True when leaving the stage now would leave additions unconfirmed or reminders unticked
+export const hasIncompleteStageItems = (stage: BrewStage | undefined): boolean =>
+  getUnconfirmedAdditions(stage).length > 0 || getUncheckedReminders(stage).length > 0;
 
 const initialStrikeOffset = 10;
 
@@ -885,7 +897,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         });
 
         const allConfirmed = updatedAdditions.length > 0 && updatedAdditions.every(a => a.confirmed);
-        const additionChecklistIds = ['mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+        const additionChecklistIds = ADDITION_SUMMARY_CHECKLIST_IDS;
         const updatedChecklist = allConfirmed
           ? currentStage.checklist.map(item =>
               additionChecklistIds.includes(item.id) && !item.checked
@@ -943,7 +955,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         });
 
         const allConfirmed = updatedAdditions.length > 0 && updatedAdditions.every(a => a.confirmed);
-        const additionChecklistIds = ['mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+        const additionChecklistIds = ADDITION_SUMMARY_CHECKLIST_IDS;
         const updatedChecklist = allConfirmed
           ? currentStage.checklist.map(item =>
               additionChecklistIds.includes(item.id) && !item.checked
@@ -994,7 +1006,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         const targetAddition = currentStage?.additions?.find(a => a.id === additionId);
         if (!targetAddition?.confirmed) return;
 
-        const additionChecklistIds = ['mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+        const additionChecklistIds = ADDITION_SUMMARY_CHECKLIST_IDS;
         const updatedStages = [...state.stages];
         updatedStages[state.currentStageIndex] = {
           ...currentStage,

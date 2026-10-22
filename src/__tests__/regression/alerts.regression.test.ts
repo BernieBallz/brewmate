@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import testRecipe from '../fixtures/testRecipe.json';
 import type { BrewfatherRecipe } from '../../types/brewfather';
-import { useBrewStore, ALERT_SNOOZE_MIN, getUnconfirmedAdditions } from '../../store/brewStore';
+import { useBrewStore, ALERT_SNOOZE_MIN, getUnconfirmedAdditions, getUncheckedReminders, hasIncompleteStageItems, ADDITION_SUMMARY_CHECKLIST_IDS } from '../../store/brewStore';
 
 const BOIL_INDEX = 4;
 
@@ -86,5 +86,26 @@ describe('Alert snooze, undo and advance guard regression tests', () => {
 
     useBrewStore.getState().confirmAdditions(boil.additions.map(a => a.id));
     expect(getUnconfirmedAdditions(useBrewStore.getState().stages[BOIL_INDEX])).toEqual([]);
+  });
+
+  it('flags unticked reminders (not addition summaries) so reminder-only stages like Strike get the check', () => {
+    useBrewStore.getState().goToStage(0); // WATER_PREP: reminders only, no additions
+    const strike = () => useBrewStore.getState().stages[0];
+    expect(strike().additions).toEqual([]);
+    expect(getUncheckedReminders(strike()).length).toBe(strike().checklist.length);
+    expect(hasIncompleteStageItems(strike())).toBe(true);
+
+    for (const item of strike().checklist) {
+      useBrewStore.getState().toggleChecklistItem(item.id);
+    }
+    expect(getUncheckedReminders(strike())).toEqual([]);
+    expect(hasIncompleteStageItems(strike())).toBe(false);
+
+    // Addition-summary reminders are left to the additions list, not double-listed
+    useBrewStore.getState().goToStage(1); // MASH_IN
+    const mashIn = useBrewStore.getState().stages[1];
+    const listed = getUncheckedReminders(mashIn).map(c => c.id);
+    expect(listed.some(id => ADDITION_SUMMARY_CHECKLIST_IDS.includes(id))).toBe(false);
+    expect(hasIncompleteStageItems(mashIn)).toBe(true);
   });
 });

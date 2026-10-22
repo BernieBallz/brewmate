@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useBrewStore } from '../store/brewStore';
+import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS } from '../store/brewStore';
 import type { StageAddition, ChecklistItem } from '../types/session';
 import { isEnzymeAddition } from '../utils/brewfatherParser';
 import {
@@ -180,7 +180,7 @@ export const StageFeed: React.FC = () => {
     };
   };
 
-  const additionReminderIds = ['mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+  const additionReminderIds = ADDITION_SUMMARY_CHECKLIST_IDS;
 
   return (
     <div className="flex flex-col h-full bg-slate-900/95 rounded-xl border border-brew-border p-2.5 overflow-hidden shadow-lg select-none">

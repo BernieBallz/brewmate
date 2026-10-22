@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useBrewStore, getUnconfirmedAdditions } from '../store/brewStore';
+import { useBrewStore, hasIncompleteStageItems } from '../store/brewStore';
 import {
   FileText,
   FolderOpen,
@@ -91,8 +91,8 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
               <button
                 key={stage.id}
                 onClick={() => {
-                  // Jumping forward past unconfirmed additions goes through the Complete Stage warning
-                  if (idx > currentStageIndex && getUnconfirmedAdditions(stages[currentStageIndex]).length > 0) {
+                  // Jumping forward past unconfirmed additions or unticked reminders goes through the Complete Stage warning
+                  if (idx > currentStageIndex && hasIncompleteStageItems(stages[currentStageIndex])) {
                     onConfirmJump(idx);
                   } else {
                     goToStage(idx);
