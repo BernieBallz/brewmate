@@ -89,7 +89,7 @@ describe('Brewfather Parser Regression Test', () => {
 
     // Verify renames and removals across stages
     const strike = stages.find(s => s.id === 'WATER_PREP')!;
-    expect(strike.checklist.map(c => c.label)).toContain('Water salts');
+    expect(strike.checklist.map(c => c.label)).toContain('Strike additions');
 
     const mashIn = stages.find(s => s.id === 'MASH_IN')!;
     expect(mashIn.checklist[0].id).toBe('mash-temp-init');
@@ -142,5 +142,22 @@ describe('Brewfather Parser Regression Test', () => {
     expect(whirlpool.checklist[0].label).toBe(`Cool to ${whirlpool.parameters.targetTemp}°C`);
     const heatOffReminders = stages.flatMap(s => s.checklist).filter(c => /heat off/i.test(c.label));
     expect(heatOffReminders.map(c => c.id)).toEqual(['steam-heat-off']);
+  });
+
+  it('puts water salts and acids on Strike Water and keeps enzymes on Mash In', () => {
+    const stages = parseBrewfatherRecipe(testRecipe as unknown as BrewfatherRecipe);
+    const strike = stages.find(s => s.id === 'WATER_PREP')!;
+    const mashIn = stages.find(s => s.id === 'MASH_IN')!;
+    const mashUseCount = (testRecipe.miscs as Array<{ use: string }>).filter(m => m.use === 'Mash').length;
+
+    expect(strike.additions.length).toBeGreaterThan(0);
+    expect(strike.additions.every(a => a.type === 'water')).toBe(true);
+    expect(strike.additions.map(a => a.name)).toEqual(expect.arrayContaining(['Calcium Chloride (CaCl2)', 'Gypsum (CaSO4)', 'Lactic Acid']));
+    expect(mashIn.additions.length).toBeGreaterThan(0);
+    expect(mashIn.additions.every(a => a.type === 'enzyme')).toBe(true);
+    // Nothing lost or duplicated in the split
+    expect(strike.additions.length + mashIn.additions.length).toBe(mashUseCount);
+    // Strike's "Water salts" reminder is the summary its additions sit under
+    expect(strike.checklist.map(c => c.id)).toContain('water-treat');
   });
 });

@@ -27,7 +27,8 @@ export function isEnzymeAddition(name: string, type?: string): boolean {
 export function buildWaterPrepStage(
   recipe: BrewfatherRecipe,
   mashTemp: number,
-  strikeOffset: number
+  strikeOffset: number,
+  strikeAdditions: StageAddition[] = []
 ): BrewStage {
   const strikeWater = recipe.data?.strikeWaterAmount || recipe.water?.mashAdjustments?.volume || 0;
   const spargeWater = recipe.data?.spargeWaterAmount || recipe.water?.spargeAdjustments?.volume || 0;
@@ -55,10 +56,10 @@ export function buildWaterPrepStage(
     actualDurationSec: 0,
     status: 'pending',
     flow,
-    additions: [],
+    additions: strikeAdditions,
     checklist: [
       { id: 'strike-sparge-vol', label: `Liquor ${strikeWater ? `${strikeWater}L` : 'Per recipe'} / ${spargeWater ? `${spargeWater}L` : 'Per recipe'}`, explanation: 'Verify liquor volumes', checked: false },
-      { id: 'water-treat', label: 'Water salts', explanation: 'Prepare water salts and acids then add to strike liquor', checked: false },
+      { id: 'water-treat', label: 'Strike additions', explanation: 'Prepare water salts and acids then add to strike liquor', checked: false },
       { id: 'fv-cooler-on', label: 'FV cooling on', explanation: 'Switch on glycol chiller for fermenter to pre-cool', checked: false }
     ],
     parameters: {
@@ -100,7 +101,7 @@ export function buildMashInStage(
     additions: mashAdditions,
     checklist: [
       { id: 'mash-temp-init', label: `Dough in & set temp ${mashTemp}°C`, explanation: 'Don’t add enzymes until target temp reached', checked: false },
-      { id: 'mash-additions-check', label: 'Mash additions', explanation: 'Add enzymes, or lactic acid', checked: false },
+      { id: 'mash-additions-check', label: 'Mash additions', explanation: 'Add enzymes once the mash is at temperature', checked: false },
       { id: 'dough-ball-check', label: 'No dough balls', explanation: 'Thoroughly stir the mash, checking corners for dry clumps', checked: false }
     ],
     parameters: {
@@ -605,12 +606,12 @@ export function parseBrewfatherRecipe(
       });
     });
 
-  // Mash additions (water salts, enzymes, acid)
-  const mashAdditions: StageAddition[] = [];
+  // Mash-use miscs: enzymes go in at Mash In; water salts and acids are added to the strike liquor
+  const mashUseAdditions: StageAddition[] = [];
   (recipe.miscs || [])
     .filter(m => m.use === 'Mash')
     .forEach((m, idx) => {
-      mashAdditions.push({
+      mashUseAdditions.push({
         id: `misc-mash-${idx}`,
         name: m.name,
         amount: m.amount,
@@ -621,6 +622,9 @@ export function parseBrewfatherRecipe(
         type: isEnzymeAddition(m.name, m.type) ? 'enzyme' : 'water'
       });
     });
+
+  const strikeAdditions = mashUseAdditions.filter(a => a.type !== 'enzyme');
+  const mashAdditions = mashUseAdditions.filter(a => a.type === 'enzyme');
 
   // Pitch additions (ALDC, nutrients, yeast)
   const pitchAdditions: StageAddition[] = [];
@@ -658,7 +662,7 @@ export function parseBrewfatherRecipe(
 
   // Build sequential stages
   const stages: BrewStage[] = [
-    buildWaterPrepStage(recipe, mashTemp, strikeOffset),
+    buildWaterPrepStage(recipe, mashTemp, strikeOffset, strikeAdditions),
     buildMashInStage(recipe, mashTemp, mashAdditions),
     buildMashScheduleStage(recipe, mashSteps, totalMashTime),
     buildLauterSpargeStage(recipe, spargeWater),

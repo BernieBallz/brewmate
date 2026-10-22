@@ -101,6 +101,9 @@ export const StageFeed: React.FC = () => {
       }
       return { label: `T-${addition.triggerTimeMin}m`, bg: 'bg-slate-800 text-amber-400 border-slate-700' };
     }
+    if (stageId === 'WATER_PREP') {
+      return { label: 'TO LIQUOR', bg: 'bg-sky-950 text-sky-300 border-sky-800' };
+    }
     if (stageId === 'MASH_IN' || stageId === 'MASH_SCHEDULE') {
       return { label: 'DOUGH-IN', bg: 'bg-amber-950 text-amber-300 border-amber-800' };
     }

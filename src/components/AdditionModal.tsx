@@ -47,6 +47,7 @@ export const AdditionModal: React.FC = () => {
     }
     if (stageId === 'HOPSTAND_WHIRLPOOL') return isHop ? 'WHIRLPOOL HOP ADDITION' : 'WHIRLPOOL ADDITION';
     if (stageId === 'YEAST_PITCH') return 'PITCH ADDITION';
+    if (stageId === 'WATER_PREP') return 'STRIKE LIQUOR ADDITION';
     if (stageId === 'MASH_IN' || stageId === 'MASH_SCHEDULE') return 'DOUGH-IN ADDITION';
     return isHop ? 'HOP ADDITION' : 'STAGE ADDITION';
   };

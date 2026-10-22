@@ -88,17 +88,24 @@ describe('Alert snooze, undo and advance guard regression tests', () => {
     expect(getUnconfirmedAdditions(useBrewStore.getState().stages[BOIL_INDEX])).toEqual([]);
   });
 
-  it('flags unticked reminders (not addition summaries) so reminder-only stages like Strike get the check', () => {
-    useBrewStore.getState().goToStage(0); // WATER_PREP: reminders only, no additions
+  it('flags unticked reminders (not addition summaries) so the Strike stage gets the check', () => {
+    useBrewStore.getState().goToStage(0); // WATER_PREP: reminders plus water-salt additions
     const strike = () => useBrewStore.getState().stages[0];
-    expect(strike().additions).toEqual([]);
-    expect(getUncheckedReminders(strike()).length).toBe(strike().checklist.length);
+    expect(strike().additions.length).toBeGreaterThan(0);
+    // "Water salts" summarises the additions, so it is not listed as a reminder of its own
+    expect(getUncheckedReminders(strike()).map(c => c.id)).not.toContain('water-treat');
+    expect(getUncheckedReminders(strike()).length).toBe(strike().checklist.length - 1);
     expect(hasIncompleteStageItems(strike())).toBe(true);
 
-    for (const item of strike().checklist) {
+    for (const item of strike().checklist.filter(c => c.id !== 'water-treat')) {
       useBrewStore.getState().toggleChecklistItem(item.id);
     }
     expect(getUncheckedReminders(strike())).toEqual([]);
+    // Reminders done, but the salts are not yet confirmed
+    expect(hasIncompleteStageItems(strike())).toBe(true);
+
+    useBrewStore.getState().confirmAdditions(strike().additions.map(a => a.id));
+    expect(strike().checklist.find(c => c.id === 'water-treat')?.checked).toBe(true);
     expect(hasIncompleteStageItems(strike())).toBe(false);
 
     // Addition-summary reminders are left to the additions list, not double-listed

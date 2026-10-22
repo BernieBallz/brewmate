@@ -70,15 +70,18 @@ const isSnoozed = (snoozedUntil: Record<string, number> | undefined, id: string,
   (snoozedUntil?.[id] ?? 0) > now;
 
 // Checklist items that summarise a stage's additions; they tick themselves once every addition is confirmed
-export const ADDITION_SUMMARY_CHECKLIST_IDS = ['mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+export const ADDITION_SUMMARY_CHECKLIST_IDS = ['water-treat', 'mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
 
 // Unconfirmed additions in a stage; used to warn before moving on
 export const getUnconfirmedAdditions = (stage: BrewStage | undefined): StageAddition[] =>
   stage?.additions?.filter(a => !a.confirmed) ?? [];
 
-// Unticked reminders in a stage, excluding the addition-summary items (the additions list already covers them)
-export const getUncheckedReminders = (stage: BrewStage | undefined): ChecklistItem[] =>
-  stage?.checklist?.filter(c => !c.checked && !ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)) ?? [];
+// Unticked reminders in a stage. Addition-summary items are skipped when the stage has additions (the
+// additions list already covers them); without additions they are ordinary manual reminders.
+export const getUncheckedReminders = (stage: BrewStage | undefined): ChecklistItem[] => {
+  const hasAdditions = (stage?.additions?.length ?? 0) > 0;
+  return stage?.checklist?.filter(c => !c.checked && !(hasAdditions && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id))) ?? [];
+};
 
 // True when leaving the stage now would leave additions unconfirmed or reminders unticked
 export const hasIncompleteStageItems = (stage: BrewStage | undefined): boolean =>
@@ -1263,6 +1266,31 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           if (waterPrep && waterPrep.flow?.nextLabel === 'NEXT: GRAIN IN') {
             waterPrep.flow.nextLabel = 'NEXT: MASH IN';
           }
+          // Water salts and acids moved from Mash In to Strike Water (enzymes stay on Mash In); keeps confirmed state
+          const mashInStage = state.stages.find(s => s.id === 'MASH_IN');
+          if (waterPrep && mashInStage) {
+            const liquorAdditions = mashInStage.additions.filter(a => a.type !== 'enzyme');
+            if (liquorAdditions.length > 0 && waterPrep.additions.length === 0) {
+              waterPrep.additions = liquorAdditions;
+              mashInStage.additions = mashInStage.additions.filter(a => a.type === 'enzyme');
+              const mashSummary = mashInStage.checklist.find(c => c.id === 'mash-additions-check');
+              if (mashSummary && mashSummary.explanation === 'Add enzymes, or lactic acid') {
+                mashSummary.explanation = 'Add enzymes once the mash is at temperature';
+              }
+              // Keep each summary reminder in step with its stage's additions
+              const syncSummary = (stage: BrewStage, summaryId: string) => {
+                const item = stage.checklist.find(c => c.id === summaryId);
+                const allConfirmed = stage.additions.length > 0 && stage.additions.every(a => a.confirmed);
+                if (item && item.checked !== allConfirmed && stage.additions.length > 0) {
+                  item.checked = allConfirmed;
+                  item.checkedAt = allConfirmed ? Date.now() : undefined;
+                }
+              };
+              syncSummary(waterPrep, 'water-treat');
+              syncSummary(mashInStage, 'mash-additions-check');
+            }
+          }
+
           // Strike Water's action button is now DONE (was STRIKE READY), like the other confirm stages
           if (waterPrep && waterPrep.flow?.startLabel === 'STRIKE READY') {
             waterPrep.flow.startLabel = 'DONE';
@@ -1270,6 +1298,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           const waterSalts = waterPrep?.checklist.find(c => c.id === 'water-treat');
           if (waterSalts && waterSalts.explanation === 'Add gypsum, calcium chloride, and acid into strike liquor') {
             waterSalts.explanation = 'Prepare water salts and acids then add to strike liquor';
+          }
+          // It now heads the Strike additions list, like "Mash additions" on Mash In
+          if (waterSalts && waterSalts.label === 'Water salts') {
+            waterSalts.label = 'Strike additions';
           }
           // Pitch's action button is now DONE (was YEAST IN), and Knockout's NEXT label follows it
           const yeastPitch = state.stages.find(s => s.id === 'YEAST_PITCH');
