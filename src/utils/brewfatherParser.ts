@@ -222,9 +222,10 @@ export function buildSpargeAdditions(recipe: BrewfatherRecipe): StageAddition[] 
   const adjustments = recipe.water?.spargeAdjustments || {};
   const additions: StageAddition[] = [];
   Object.entries(adjustments).forEach(([key, value]) => {
-    if (key === 'volume' || key === 'acids' || typeof value !== 'number' || value <= 0) return;
-    const readable = key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
-    additions.push({ ...base, id: `sparge-salt-${key}`, name: WATER_SALT_NAMES[key] || readable, amount: roundAmount(value), unit: 'g', type: 'water' });
+    // Only known salts: other numeric water-tool fields (volume, ion totals, pH…) are not things to add
+    const saltName = WATER_SALT_NAMES[key];
+    if (!saltName || typeof value !== 'number' || value <= 0) return;
+    additions.push({ ...base, id: `sparge-salt-${key}`, name: saltName, amount: roundAmount(value), unit: 'g', type: 'water' });
   });
   (Array.isArray(adjustments.acids) ? adjustments.acids : []).forEach((acid: any, idx: number) => {
     if (!acid?.amount) return;

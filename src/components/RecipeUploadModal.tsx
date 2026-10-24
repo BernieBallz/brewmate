@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBrewStore } from '../store/brewStore';
 import { Upload, FileText, AlertCircle, X, Loader2, CheckCircle2 } from 'lucide-react';
 import type { BrewfatherRecipe } from '../types/brewfather';
+import { validateRecipe, MAX_RECIPE_BYTES } from '../utils/recipeValidation';
 
 interface RecipeUploadModalProps {
   isOpen: boolean;
@@ -27,28 +28,43 @@ export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, on
 
   if (!isOpen) return null;
 
-  // Shared by file upload and paste: validate, show progress, load, confirm, close
-  const ingestRecipe = async (readText: () => Promise<string>, requireName: boolean) => {
+  const reject = (message: string) => {
+    setPhase({ kind: 'idle' });
+    setErrorMsg(message);
+  };
+
+  // Shared by file upload and paste: parse, validate (malformed recipes are rejected, never repaired),
+  // show progress, load, confirm, close
+  const ingestRecipe = async (readText: () => Promise<string>) => {
     setErrorMsg(null);
     setPhase({ kind: 'loading' });
     const startedAt = Date.now();
+
+    let parsed: unknown;
     try {
-      const parsed = JSON.parse(await readText()) as BrewfatherRecipe;
-      if (requireName ? !parsed.name : !parsed.name && !parsed.type) {
-        throw new Error(requireName
-          ? 'Recipe JSON must have a "name" property'
-          : 'JSON missing valid Brewfather recipe keys (name, type, etc.)');
-      }
+      parsed = JSON.parse(await readText());
+    } catch {
+      reject('This isn’t valid JSON. Export the recipe from Brewfather as a JSON file and try again.');
+      return;
+    }
+
+    const problems = validateRecipe(parsed);
+    if (problems.length > 0) {
+      reject(`This recipe can’t be loaded:\n• ${problems.join('\n• ')}`);
+      return;
+    }
+
+    try {
+      const recipe = parsed as BrewfatherRecipe;
       await wait(Math.max(0, MIN_LOADING_MS - (Date.now() - startedAt)));
-      loadRecipe(parsed);
-      setPhase({ kind: 'done', name: parsed.name || 'Recipe', stageCount: useBrewStore.getState().stages.length });
+      loadRecipe(recipe);
+      setPhase({ kind: 'done', name: recipe.name, stageCount: useBrewStore.getState().stages.length });
       setJsonInput('');
       await wait(SUCCESS_HOLD_MS);
       setPhase({ kind: 'idle' });
       onClose();
     } catch (err: any) {
-      setPhase({ kind: 'idle' });
-      setErrorMsg(`${requireName ? 'JSON Parse Error' : 'Failed to parse recipe file'}: ${err.message}`);
+      reject(`This recipe couldn’t be turned into brew stages: ${err?.message || String(err)}`);
     }
   };
 
@@ -62,8 +78,12 @@ export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, on
       setErrorMsg('Invalid file format: Please select a Brewfather .json recipe file.');
       return;
     }
+    if (file.size > MAX_RECIPE_BYTES) {
+      setErrorMsg('This file is too large to be a Brewfather recipe (limit 2 MB).');
+      return;
+    }
 
-    void ingestRecipe(() => file.text(), false);
+    void ingestRecipe(() => file.text());
   };
 
   const handlePasteSubmit = () => {
@@ -71,7 +91,11 @@ export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, on
       setErrorMsg('Please paste JSON text first');
       return;
     }
-    void ingestRecipe(async () => jsonInput, true);
+    if (jsonInput.length > MAX_RECIPE_BYTES) {
+      setErrorMsg('This is too large to be a Brewfather recipe (limit 2 MB).');
+      return;
+    }
+    void ingestRecipe(async () => jsonInput);
   };
 
   const isBusy = phase.kind !== 'idle';
@@ -111,9 +135,9 @@ export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, on
         ) : (
           <>
             {errorMsg && (
-              <div className="my-2 p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/50 text-xs font-mono text-rose-200 flex items-center space-x-2">
+              <div className="my-2 p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/50 text-xs font-mono text-rose-200 flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>{errorMsg}</span>
+                <span className="whitespace-pre-line break-words">{errorMsg}</span>
               </div>
             )}
 
