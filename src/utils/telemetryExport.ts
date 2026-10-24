@@ -183,10 +183,19 @@ export const generateTelemetryJson = (options: TelemetryExportOptions): string =
   return JSON.stringify(generateTelemetryData(options), null, 2);
 };
 
+// Spreadsheets run cells starting with = + - @ (or tab / CR) as formulas, so text from an imported recipe like
+// =HYPERLINK(...) would become live. Prefix such text with ' so it stays text; real numbers (e.g. -120) are untouched.
+export const neutraliseCsvFormula = (value: unknown): string => {
+  const text = String(value ?? '');
+  if (typeof value === 'number') return text;
+  if (/^[=+\-@\t\r]/.test(text) && !/^[+-]?\d+(\.\d+)?$/.test(text.trim())) return `'${text}`;
+  return text;
+};
+
 export const generateCsvReport = (options: TelemetryExportOptions): string => {
   const { recipe, stages, measurements, auditLogs, sessionStartTime, sessionEndTime, finishedAt } = options;
   const rows: string[] = [];
-  const escapeCsv = (str: any) => `"${String(str ?? '').replace(/"/g, '""')}"`;
+  const escapeCsv = (value: any) => `"${neutraliseCsvFormula(value).replace(/"/g, '""')}"`;
 
   const isComplete = finishedAt !== null || (stages.length > 0 && stages[stages.length - 1].status === 'completed');
   const sumStageDurationSec = stages.reduce((acc, s) => acc + (s.actualDurationSec || 0), 0);
