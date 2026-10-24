@@ -104,6 +104,9 @@ export const StageFeed: React.FC = () => {
     if (stageId === 'WATER_PREP') {
       return { label: 'TO LIQUOR', bg: 'bg-sky-950 text-sky-300 border-sky-800' };
     }
+    if (stageId === 'LAUTER_SPARGE') {
+      return { label: 'TO SPARGE', bg: 'bg-sky-950 text-sky-300 border-sky-800' };
+    }
     if (stageId === 'MASH_IN' || stageId === 'MASH_SCHEDULE') {
       return { label: 'DOUGH-IN', bg: 'bg-amber-950 text-amber-300 border-amber-800' };
     }
@@ -333,11 +336,11 @@ export const StageFeed: React.FC = () => {
                         {currentStage.additions.map((addition) => {
                           const isDue =
                             !addition.confirmed &&
-                            (!currentStage.isTimed ||
+                            (currentStage.timerType !== 'countdown' ||
                               ((timerStatus !== 'idle' || currentStage.flowPhase === 'finished') &&
                                 activeRemainingSec <= addition.triggerRemainingSec));
                           const waitSec =
-                            currentStage.isTimed && !addition.confirmed && activeRemainingSec > addition.triggerRemainingSec
+                            currentStage.timerType === 'countdown' && !addition.confirmed && activeRemainingSec > addition.triggerRemainingSec
                               ? activeRemainingSec - addition.triggerRemainingSec
                               : 0;
                           const badge = getAdditionBadge(addition);
@@ -362,7 +365,7 @@ export const StageFeed: React.FC = () => {
                                   <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-black uppercase border shrink-0 ${badge.bg}`}>
                                     {badge.label}
                                   </span>
-                                  {!addition.confirmed && currentStage.isTimed && (
+                                  {!addition.confirmed && currentStage.timerType === 'countdown' && (
                                     <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold border shrink-0 ${
                                       isDue
                                         ? 'bg-amber-400 text-slate-950 border-amber-300 font-black'
@@ -606,11 +609,11 @@ export const StageFeed: React.FC = () => {
               currentStage.additions.map((addition) => {
                 const isDue =
                   !addition.confirmed &&
-                  (!currentStage.isTimed ||
+                  (currentStage.timerType !== 'countdown' ||
                     ((timerStatus !== 'idle' || currentStage.flowPhase === 'finished') &&
                       activeRemainingSec <= addition.triggerRemainingSec));
                 const waitSec =
-                  currentStage.isTimed && !addition.confirmed && activeRemainingSec > addition.triggerRemainingSec
+                  currentStage.timerType === 'countdown' && !addition.confirmed && activeRemainingSec > addition.triggerRemainingSec
                     ? activeRemainingSec - addition.triggerRemainingSec
                     : 0;
                 const badge = getAdditionBadge(addition);
@@ -640,7 +643,7 @@ export const StageFeed: React.FC = () => {
                         </span>
 
                         {/* Live Timer Countdown or Due Now Pill */}
-                        {!addition.confirmed && currentStage.isTimed && (
+                        {!addition.confirmed && currentStage.timerType === 'countdown' && (
                           <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold border shrink-0 ${
                             isDue
                               ? 'bg-amber-400 text-slate-950 border-amber-300 font-black'

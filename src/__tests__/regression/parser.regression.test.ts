@@ -160,4 +160,29 @@ describe('Brewfather Parser Regression Test', () => {
     // Strike's "Water salts" reminder is the summary its additions sit under
     expect(strike.checklist.map(c => c.id)).toContain('water-treat');
   });
+
+  it('lists sparge water salts and acid on the Sparge stage', () => {
+    const sparge = parseBrewfatherRecipe(testRecipe as unknown as BrewfatherRecipe).find(s => s.id === 'LAUTER_SPARGE')!;
+    // From water.spargeAdjustments in the fixture: CaCl2 5 g, gypsum 4 g, lactic 0.5 ml at 80%
+    expect(sparge.additions.map(a => [a.name, a.amount, a.unit])).toEqual([
+      ['Calcium Chloride (CaCl2)', 5, 'g'],
+      ['Gypsum (CaSO4)', 4, 'g'],
+      ['Lactic Acid (80%)', 0.5, 'ml']
+    ]);
+    expect(sparge.checklist.map(c => c.id)).toContain('sparge-additions');
+  });
+
+  it('prefers Sparge-use miscs over the water adjustments, and adds no heading when there is nothing to add', () => {
+    const withMiscs = {
+      ...testRecipe,
+      miscs: [...testRecipe.miscs, { name: 'Test Sparge Salt', amount: 3, unit: 'g', use: 'Sparge', type: 'Water Agent' }]
+    } as unknown as BrewfatherRecipe;
+    const sparge = parseBrewfatherRecipe(withMiscs).find(s => s.id === 'LAUTER_SPARGE')!;
+    expect(sparge.additions.map(a => a.name)).toEqual(['Test Sparge Salt']);
+
+    const untreated = { ...testRecipe, water: { mashAdjustments: testRecipe.water.mashAdjustments, spargeAdjustments: { volume: 20 } } } as unknown as BrewfatherRecipe;
+    const plain = parseBrewfatherRecipe(untreated).find(s => s.id === 'LAUTER_SPARGE')!;
+    expect(plain.additions).toEqual([]);
+    expect(plain.checklist.map(c => c.id)).not.toContain('sparge-additions');
+  });
 });

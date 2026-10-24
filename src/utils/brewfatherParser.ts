@@ -186,9 +186,65 @@ export function buildMashScheduleStage(
   };
 }
 
+// Brewfather's water-tool salt keys, named the way brewers know them
+const WATER_SALT_NAMES: Record<string, string> = {
+  calciumChloride: 'Calcium Chloride (CaCl2)',
+  calciumSulfate: 'Gypsum (CaSO4)',
+  magnesiumSulfate: 'Epsom Salt (MgSO4)',
+  magnesiumChloride: 'Magnesium Chloride (MgCl2)',
+  sodiumChloride: 'Table Salt (NaCl)',
+  sodiumBicarbonate: 'Baking Soda (NaHCO3)',
+  calciumCarbonate: 'Chalk (CaCO3)',
+  calciumHydroxide: 'Pickling Lime (Ca(OH)2)',
+  sodiumMetabisulfite: 'Sodium Metabisulfite (Na2S2O5)'
+};
+
+// Two decimals, as Brewfather shows them (e.g. 36.32 g, 2.83 ml)
+const roundAmount = (n: number) => Math.round(n * 100) / 100;
+
+// Sparge liquor treatment. Sparge-use miscs win if the recipe has them; otherwise the salts and acids come
+// from the water adjustments (Brewfather only lists sparge salts there), so nothing is listed twice.
+export function buildSpargeAdditions(recipe: BrewfatherRecipe): StageAddition[] {
+  const base = { triggerTimeMin: 0, triggerRemainingSec: 0, confirmed: false };
+
+  const spargeMiscs = (recipe.miscs || []).filter(m => m.use === 'Sparge');
+  if (spargeMiscs.length > 0) {
+    return spargeMiscs.map((m, idx) => ({
+      ...base,
+      id: `misc-sparge-${idx}`,
+      name: m.name,
+      amount: m.amount,
+      unit: m.unit || 'g',
+      type: isEnzymeAddition(m.name, m.type) ? 'enzyme' : 'water'
+    }));
+  }
+
+  const adjustments = recipe.water?.spargeAdjustments || {};
+  const additions: StageAddition[] = [];
+  Object.entries(adjustments).forEach(([key, value]) => {
+    if (key === 'volume' || key === 'acids' || typeof value !== 'number' || value <= 0) return;
+    const readable = key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+    additions.push({ ...base, id: `sparge-salt-${key}`, name: WATER_SALT_NAMES[key] || readable, amount: roundAmount(value), unit: 'g', type: 'water' });
+  });
+  (Array.isArray(adjustments.acids) ? adjustments.acids : []).forEach((acid: any, idx: number) => {
+    if (!acid?.amount) return;
+    const acidType = String(acid.type || 'acid');
+    additions.push({
+      ...base,
+      id: `sparge-acid-${idx}`,
+      name: `${acidType.charAt(0).toUpperCase()}${acidType.slice(1)} Acid${acid.concentration ? ` (${acid.concentration}%)` : ''}`,
+      amount: roundAmount(acid.amount),
+      unit: acid.unit || 'ml',
+      type: 'water'
+    });
+  });
+  return additions;
+}
+
 export function buildLauterSpargeStage(
   recipe: BrewfatherRecipe,
-  spargeWater: number
+  spargeWater: number,
+  spargeAdditions: StageAddition[] = []
 ): BrewStage {
   const spargeTemp = recipe.equipment?.spargeTemperature || 80;
   const boilVol = recipe.boilSize || 267;
@@ -217,9 +273,13 @@ export function buildLauterSpargeStage(
     actualDurationSec: 0,
     status: 'pending',
     flow,
-    additions: [],
+    additions: spargeAdditions,
     checklist: [
       { id: 'sparge-prep', label: `Sparge ${spargeTemp}°C`, explanation: 'Verify sparge liquor in HLT is heated to 78–80°C', checked: false },
+      // Heads the sparge salts/acid list; only present when the recipe treats its sparge liquor
+      ...(spargeAdditions.length > 0
+        ? [{ id: 'sparge-additions', label: 'Sparge additions', explanation: 'Prepare sparge water salts and acid then add to sparge liquor', checked: false }]
+        : []),
       { id: 'equal-flow', label: 'Even flow', explanation: 'Balance runoff rate with sparge inflow to prevent bed compaction', checked: false },
       { id: 'kettle-early-heat', label: 'Kettle heat on', explanation: 'Turn on small kettle element as soon as it is submerged', checked: false },
       { id: 'runoff-gravity-cutoff', label: 'Stop before 1.010', explanation: 'Test runnings gravity; halt sparge if below 1.010 to prevent tannin extraction', checked: false },
@@ -665,7 +725,7 @@ export function parseBrewfatherRecipe(
     buildWaterPrepStage(recipe, mashTemp, strikeOffset, strikeAdditions),
     buildMashInStage(recipe, mashTemp, mashAdditions),
     buildMashScheduleStage(recipe, mashSteps, totalMashTime),
-    buildLauterSpargeStage(recipe, spargeWater),
+    buildLauterSpargeStage(recipe, spargeWater, buildSpargeAdditions(recipe)),
     buildBoilStage(recipe, boilTime, boilAdditions, hasWhirlpool)
   ];
 

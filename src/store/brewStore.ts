@@ -10,7 +10,7 @@ import type {
   BrewStage,
   ChecklistItem
 } from '../types/session';
-import { parseBrewfatherRecipe } from '../utils/brewfatherParser';
+import { parseBrewfatherRecipe, buildSpargeAdditions } from '../utils/brewfatherParser';
 import { audioAlarm } from '../utils/audioAlarm';
 import { vibrate, VIBRATION_PATTERNS } from '../utils/vibration';
 import { wakeLockManager } from '../utils/wakeLock';
@@ -70,7 +70,7 @@ const isSnoozed = (snoozedUntil: Record<string, number> | undefined, id: string,
   (snoozedUntil?.[id] ?? 0) > now;
 
 // Checklist items that summarise a stage's additions; they tick themselves once every addition is confirmed
-export const ADDITION_SUMMARY_CHECKLIST_IDS = ['water-treat', 'mash-additions-check', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
+export const ADDITION_SUMMARY_CHECKLIST_IDS = ['water-treat', 'mash-additions-check', 'sparge-additions', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
 
 // Unconfirmed additions in a stage; used to warn before moving on
 export const getUnconfirmedAdditions = (stage: BrewStage | undefined): StageAddition[] =>
@@ -1288,6 +1288,20 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
               };
               syncSummary(waterPrep, 'water-treat');
               syncSummary(mashInStage, 'mash-additions-check');
+            }
+          }
+
+          // Sparge salts and acid were never listed; rebuild them from the saved recipe's sparge water treatment
+          const spargeStage = state.stages.find(s => s.id === 'LAUTER_SPARGE');
+          if (state.recipe && spargeStage && spargeStage.additions.length === 0) {
+            const spargeAdditions = buildSpargeAdditions(state.recipe);
+            if (spargeAdditions.length > 0) {
+              spargeStage.additions = spargeAdditions;
+              if (!spargeStage.checklist.some(c => c.id === 'sparge-additions')) {
+                const summary = { id: 'sparge-additions', label: 'Sparge additions', explanation: 'Prepare sparge water salts and acid then add to sparge liquor', checked: false };
+                const afterPrep = spargeStage.checklist.findIndex(c => c.id === 'sparge-prep') + 1;
+                spargeStage.checklist = [...spargeStage.checklist.slice(0, afterPrep), summary, ...spargeStage.checklist.slice(afterPrep)];
+              }
             }
           }
 
