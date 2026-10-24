@@ -29,6 +29,11 @@ self.addEventListener('notificationclick', (event) => {
             action
           });
         }
+        // Next Stage may need the Complete Stage dialog, so bring the app to the front
+        const first = clientList[0];
+        if (action === 'next-stage' && first && 'focus' in first) {
+          return first.focus();
+        }
       })
     );
     return;

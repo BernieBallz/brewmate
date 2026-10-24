@@ -69,6 +69,9 @@ export const ALERT_SNOOZE_MIN = 2;
 const isSnoozed = (snoozedUntil: Record<string, number> | undefined, id: string, now: number): boolean =>
   (snoozedUntil?.[id] ?? 0) > now;
 
+// Fired when something outside the UI (e.g. the lock-screen Next Stage button) needs the Complete Stage dialog
+export const CONFIRM_ADVANCE_EVENT = 'brewmate:confirm-advance';
+
 // Checklist items that summarise a stage's additions; they tick themselves once every addition is confirmed
 export const ADDITION_SUMMARY_CHECKLIST_IDS = ['water-treat', 'mash-additions-check', 'sparge-additions', 'boil-additions-monitor', 'whirlpool-additions', 'pitch-additions'];
 
@@ -1421,7 +1424,12 @@ if (typeof window !== 'undefined') {
         store.extendTimer(300);
         break;
       case 'next-stage':
-        store.nextStage();
+        // Same rule as the in-app NEXT button: unfinished items go through the Complete Stage dialog
+        if (hasIncompleteStageItems(store.stages[store.currentStageIndex])) {
+          window.dispatchEvent(new CustomEvent(CONFIRM_ADVANCE_EVENT));
+        } else {
+          store.nextStage();
+        }
         break;
     }
   });

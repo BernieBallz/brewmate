@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useBrewStore } from './store/brewStore';
+import { useBrewStore, CONFIRM_ADVANCE_EVENT } from './store/brewStore';
 import { HeaderBar } from './components/HeaderBar';
 import { LandscapeHUD } from './components/LandscapeHUD';
 import { PortraitHUD } from './components/PortraitHUD';
@@ -67,6 +67,16 @@ export function App() {
 
     return () => clearInterval(interval);
   }, [tick]);
+
+  // Lock-screen "Next Stage" with unfinished items asks for the Complete Stage dialog instead of skipping it
+  useEffect(() => {
+    const openNextStageConfirm = () => {
+      setAdvanceTargetIndex(null);
+      setIsAdvanceModalOpen(true);
+    };
+    window.addEventListener(CONFIRM_ADVANCE_EVENT, openNextStageConfirm);
+    return () => window.removeEventListener(CONFIRM_ADVANCE_EVENT, openNextStageConfirm);
+  }, []);
 
   // Mobile standby / sleep wake-up recovery
   useEffect(() => {
