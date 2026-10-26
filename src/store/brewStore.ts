@@ -1124,6 +1124,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         const metricToChecklistId: Partial<Record<keyof SessionMeasurements, string>> = {
           strikeTempActual: 'strike-temp',
           mashInTempActual: 'mash-temp-init',
+          mashRestTempActual: 'mash-temp-stable',
           mashPhActual: 'ph-sample',
           preBoilGravityActual: 'preboil-sg',
           postBoilGravityActual: 'postboil-sg'

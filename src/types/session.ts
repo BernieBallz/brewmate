@@ -106,6 +106,7 @@ export interface BrewStage {
 export interface SessionMeasurements {
   strikeTempActual?: number;
   mashInTempActual?: number;
+  mashRestTempActual?: number;
   mashPhActual?: number;
   preBoilVolumeActual?: number;
   preBoilGravityActual?: number;

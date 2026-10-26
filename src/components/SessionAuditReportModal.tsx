@@ -290,6 +290,15 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
                       </span>
                     </div>
                   </div>
+                  <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex items-center space-x-2">
+                    <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-gray-400 block font-mono">Mash Rest Temp</span>
+                      <span className="text-xs sm:text-sm font-bold text-cyan-400 font-mono truncate block">
+                        {measurements.mashRestTempActual !== undefined ? `${measurements.mashRestTempActual}°C` : '--'}
+                      </span>
+                    </div>
+                  </div>
                   <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
                     <span className="text-[10px] text-gray-400 block font-mono">Mash pH</span>
                     <span className="text-xs sm:text-sm font-bold text-cyan-400 font-mono">

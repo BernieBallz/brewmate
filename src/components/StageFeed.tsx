@@ -119,6 +119,9 @@ export const StageFeed: React.FC = () => {
       case 'mash-temp-init':
         return { key: 'mashInTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
           defaultValue: stageTargetTemp ?? recipe?.mash?.steps?.[0]?.stepTemp ?? 65 };
+      case 'mash-temp-stable':
+        return { key: 'mashRestTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
+          defaultValue: stageTargetTemp ?? recipe?.mash?.steps?.[0]?.stepTemp ?? 65 };
       case 'ph-sample':
         return { key: 'mashPhActual', label: 'Recorded pH:', step: 0.05, stepLabel: '0.05', decimals: 2, suffix: '', color: 'cyan',
           defaultValue: 5.25 };
@@ -756,6 +759,14 @@ export const StageFeed: React.FC = () => {
                   <span className="text-amber-400 font-bold">
                     {measurements.mashInTempActual !== undefined
                       ? `${measurements.mashInTempActual.toFixed(1)}°C`
+                      : `${(recipe?.mash?.steps?.[0]?.stepTemp ?? 65).toFixed(1)}°C (target)`}
+                  </span>
+                </div>
+                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
+                  <span className="text-gray-400">Mash Rest Temp</span>
+                  <span className="text-amber-400 font-bold">
+                    {measurements.mashRestTempActual !== undefined
+                      ? `${measurements.mashRestTempActual.toFixed(1)}°C`
                       : `${(recipe?.mash?.steps?.[0]?.stepTemp ?? 65).toFixed(1)}°C (target)`}
                   </span>
                 </div>
