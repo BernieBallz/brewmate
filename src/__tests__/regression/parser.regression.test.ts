@@ -120,7 +120,7 @@ describe('Brewfather Parser Regression Test', () => {
 
     // Stopwatch stages record actual time; plannedDurationSec is only an estimate
     expect(byId('LAUTER_SPARGE').timerType).toBe('stopwatch');
-    expect(byId('LAUTER_SPARGE').plannedDurationSec).toBe(45 * 60);
+    expect(byId('LAUTER_SPARGE').plannedDurationSec).toBe(60 * 60);
     expect(byId('COOLING_RECIRC').plannedDurationSec).toBe(20 * 60);
     expect(byId('KNOCKOUT_TRANSFER').plannedDurationSec).toBe(60 * 60);
   });

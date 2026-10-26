@@ -60,6 +60,7 @@ export function buildWaterPrepStage(
     checklist: [
       { id: 'strike-sparge-vol', label: `Liquor ${strikeWater ? `${strikeWater}L` : 'Per recipe'} / ${spargeWater ? `${spargeWater}L` : 'Per recipe'}`, explanation: 'Verify liquor volumes', checked: false },
       { id: 'water-treat', label: 'Strike additions', explanation: 'Prepare water salts and acids then add to strike liquor', checked: false },
+      { id: 'strike-temp', label: `Strike temp ${targetStrikeTemp}°C`, explanation: 'Heat the strike liquor to target, then record the actual temperature', checked: false },
       { id: 'fv-cooler-on', label: 'FV cooling on', explanation: 'Switch on glycol chiller for fermenter to pre-cool', checked: false }
     ],
     parameters: {
@@ -270,7 +271,7 @@ export function buildLauterSpargeStage(
     description: 'Runoff into kettle, sparge grain bed, verify pre-boil gravity and ramp kettle to boil.',
     isTimed: true,
     timerType: 'stopwatch',
-    plannedDurationSec: 2700, // est. 45m (stopwatch; actual time is recorded)
+    plannedDurationSec: 3600, // est. 60m (stopwatch; actual time is recorded)
     actualDurationSec: 0,
     status: 'pending',
     flow,

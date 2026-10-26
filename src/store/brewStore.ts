@@ -1089,6 +1089,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         if (waterPrep) {
           waterPrep.parameters.targetTemp = newStrikeTemp;
           waterPrep.flow.endLog = `Strike offset +${clamped}°C (mash ${mashTemp}°C → strike ${newStrikeTemp}°C)`;
+          // Keep the "Strike temp" reminder's target in step with the offset
+          waterPrep.checklist = waterPrep.checklist.map(c =>
+            c.id === 'strike-temp' ? { ...c, label: `Strike temp ${newStrikeTemp}°C` } : c
+          );
         }
 
         if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
@@ -1118,6 +1122,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         const state = get();
         const now = Date.now();
         const metricToChecklistId: Partial<Record<keyof SessionMeasurements, string>> = {
+          strikeTempActual: 'strike-temp',
+          mashInTempActual: 'mash-temp-init',
           mashPhActual: 'ph-sample',
           preBoilGravityActual: 'preboil-sg',
           postBoilGravityActual: 'postboil-sg'
@@ -1320,6 +1326,18 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           if (waterSalts && waterSalts.label === 'Water salts') {
             waterSalts.label = 'Strike additions';
           }
+          // New "Strike temp" reminder (records the actual strike temperature), after Strike additions
+          if (waterPrep && !waterPrep.checklist.some(c => c.id === 'strike-temp')) {
+            const strikeTempItem = {
+              id: 'strike-temp',
+              label: `Strike temp ${waterPrep.parameters?.targetTemp ?? ''}°C`,
+              explanation: 'Heat the strike liquor to target, then record the actual temperature',
+              checked: state.measurements?.strikeTempActual !== undefined
+            };
+            const afterSalts = waterPrep.checklist.findIndex(c => c.id === 'water-treat') + 1;
+            const insertAt = afterSalts > 0 ? afterSalts : waterPrep.checklist.length;
+            waterPrep.checklist = [...waterPrep.checklist.slice(0, insertAt), strikeTempItem, ...waterPrep.checklist.slice(insertAt)];
+          }
           // Pitch's action button is now DONE (was YEAST IN), and Knockout's NEXT label follows it
           const yeastPitch = state.stages.find(s => s.id === 'YEAST_PITCH');
           if (yeastPitch && yeastPitch.flow?.startLabel === 'YEAST IN') {
@@ -1333,7 +1351,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           // Short names now follow the timer screen's flow labels; stopwatch estimates are more realistic
           const legacyStageUpdates: Record<string, { title?: [string, string]; shortCode?: [string, string]; estimateSec?: [number, number] }> = {
             MASH_SCHEDULE: { shortCode: ['MASH', 'MASH REST'] },
-            LAUTER_SPARGE: { title: ['Lauter & Sparge', 'Sparge'], shortCode: ['LAUTER', 'SPARGE'] },
+            LAUTER_SPARGE: { title: ['Lauter & Sparge', 'Sparge'], shortCode: ['LAUTER', 'SPARGE'], estimateSec: [2700, 3600] },
             COOLING_RECIRC: { estimateSec: [600, 1200] },
             KNOCKOUT_TRANSFER: { estimateSec: [1500, 3600] }
           };

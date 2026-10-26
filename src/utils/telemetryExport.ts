@@ -119,6 +119,7 @@ export const generateTelemetryData = (options: TelemetryExportOptions) => {
     },
     measurements: {
       strikeTempActualC: measurements.strikeTempActual ?? null,
+      mashInTempActualC: measurements.mashInTempActual ?? null,
       mashPhActual: measurements.mashPhActual ?? null,
       preBoilGravityActual: measurements.preBoilGravityActual ?? null,
       postBoilGravityActual: measurements.postBoilGravityActual ?? null,
@@ -225,7 +226,8 @@ export const generateCsvReport = (options: TelemetryExportOptions): string => {
       'Actual OG',
       'Pre-Boil SG',
       'Mash pH',
-      'Strike Temp Actual (C)'
+      'Strike Temp Actual (C)',
+      'Mash In Temp Actual (C)'
     ]
       .map(escapeCsv)
       .join(',')
@@ -243,7 +245,8 @@ export const generateCsvReport = (options: TelemetryExportOptions): string => {
       measurements.postBoilGravityActual ?? 'N/A',
       measurements.preBoilGravityActual ?? 'N/A',
       measurements.mashPhActual ?? 'N/A',
-      measurements.strikeTempActual ?? 'N/A'
+      measurements.strikeTempActual ?? 'N/A',
+      measurements.mashInTempActual ?? 'N/A'
     ]
       .map(escapeCsv)
       .join(',')
@@ -393,6 +396,11 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
     `- **Strike Temp**: ${
       measurements.strikeTempActual !== undefined ? `${measurements.strikeTempActual} °C` : 'Not recorded'
     } (Target: ~${stages[0]?.parameters?.targetTemp ?? recipe?.data?.strikeTemp ?? 71.5}°C)`
+  );
+  lines.push(
+    `- **Mash In Temp**: ${
+      measurements.mashInTempActual !== undefined ? `${measurements.mashInTempActual} °C` : 'Not recorded'
+    } (Target: ${recipe?.mash?.steps?.[0]?.stepTemp ?? 65}°C)`
   );
   lines.push(
     `- **Mash pH (15m sample)**: ${

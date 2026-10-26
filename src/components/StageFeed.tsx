@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS } from '../store/brewStore';
-import type { StageAddition, ChecklistItem } from '../types/session';
+import type { StageAddition, ChecklistItem, SessionMeasurements } from '../types/session';
 import { isEnzymeAddition } from '../utils/brewfatherParser';
 import {
   Check,
@@ -20,6 +20,25 @@ const tabClass = (isActive: boolean): string =>
       ? 'bg-amber-500/10 text-amber-300 border-amber-500/40'
       : 'text-gray-400 hover:text-gray-200 border-transparent'
   }`;
+
+// A reminder that records a measured value (temperature, pH, gravity) with a -/+ stepper
+interface MeasurementStepper {
+  key: keyof SessionMeasurements;
+  label: string;
+  step: number;
+  stepLabel: string;
+  decimals: number;
+  suffix: string;
+  color: keyof typeof STEPPER_COLORS;
+  defaultValue: number;
+}
+
+const STEPPER_COLORS = {
+  amber: { button: 'text-amber-400', value: 'text-amber-300 border-amber-800/60' },
+  cyan: { button: 'text-cyan-400', value: 'text-cyan-300 border-cyan-800/60' },
+  emerald: { button: 'text-emerald-400', value: 'text-emerald-300 border-emerald-800/60' },
+  purple: { button: 'text-purple-400', value: 'text-purple-300 border-purple-800/60' }
+};
 
 export const StageFeed: React.FC = () => {
   const {
@@ -83,10 +102,35 @@ export const StageFeed: React.FC = () => {
     scrollBodyRef.current?.scrollTo({ top: 0 });
   }, [currentStageIndex, activeTab]);
 
-  const updateMetric = (key: any, currentVal: number | undefined, delta: number, defaultVal: number) => {
+  const updateMetric = (key: keyof SessionMeasurements, currentVal: number | undefined, delta: number, defaultVal: number) => {
     const val = currentVal !== undefined ? currentVal : defaultVal;
     const newVal = Math.round((val + delta) * 1000) / 1000;
     setMeasurement(key, newVal);
+  };
+
+  // Reminders that record a measured value with a -/+ stepper. Recording a value ticks the reminder
+  // (see setMeasurement) and it appears in the session log, report and exports.
+  const getMeasurementStepper = (checklistId: string): MeasurementStepper | null => {
+    const stageTargetTemp = currentStage?.parameters?.targetTemp;
+    switch (checklistId) {
+      case 'strike-temp':
+        return { key: 'strikeTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
+          defaultValue: stageTargetTemp ?? 75 };
+      case 'mash-temp-init':
+        return { key: 'mashInTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
+          defaultValue: stageTargetTemp ?? recipe?.mash?.steps?.[0]?.stepTemp ?? 65 };
+      case 'ph-sample':
+        return { key: 'mashPhActual', label: 'Recorded pH:', step: 0.05, stepLabel: '0.05', decimals: 2, suffix: '', color: 'cyan',
+          defaultValue: 5.25 };
+      case 'preboil-sg':
+        return { key: 'preBoilGravityActual', label: 'Recorded SG:', step: 0.001, stepLabel: '1pt', decimals: 3, suffix: '', color: 'emerald',
+          defaultValue: recipe?.preBoilGravity || 1.039 };
+      case 'postboil-sg':
+        return { key: 'postBoilGravityActual', label: 'Recorded SG:', step: 0.001, stepLabel: '1pt', decimals: 3, suffix: '', color: 'purple',
+          defaultValue: recipe?.og || 1.045 };
+      default:
+        return null;
+    }
   };
 
   // Stage-aware addition badge label & styling
@@ -271,10 +315,8 @@ export const StageFeed: React.FC = () => {
               )?.id;
 
               return currentStage.checklist.map((item) => {
-                const isMashPh = item.id === 'ph-sample';
-                const isPreBoilSg = item.id === 'preboil-sg';
-                const isPostBoilSg = item.id === 'postboil-sg';
-                const hasStepper = isMashPh || isPreBoilSg || isPostBoilSg;
+                const stepper = getMeasurementStepper(item.id);
+                const hasStepper = stepper !== null;
                 const isAdditionLinkItem = additionReminderIds.includes(item.id) && hasAdditions;
                 const isNextUp = !isChecklistItemDone(item) && item.id === firstActionableId;
 
@@ -531,62 +573,39 @@ export const StageFeed: React.FC = () => {
                     </div>
 
                     {/* Full-Width Unclipped Stepper Row for Items with Measurement Steppers */}
-                    {hasStepper && (
-                      <div 
+                    {stepper && (
+                      <div
                         className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 w-full px-0.5"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <span className="text-[11px] font-mono uppercase tracking-wider text-gray-300 font-bold shrink-0">
-                          {isMashPh ? 'Recorded pH:' : 'Recorded SG:'}
+                          {stepper.label}
                         </span>
 
                         <div className="flex items-center space-x-1.5 shrink-0">
                           {/* Stepper - */}
                           <button
                             type="button"
-                            onClick={() => {
-                              if (isMashPh) updateMetric('mashPhActual', measurements.mashPhActual, -0.05, 5.25);
-                              else if (isPreBoilSg) updateMetric('preBoilGravityActual', measurements.preBoilGravityActual, -0.001, recipe?.preBoilGravity || 1.039);
-                              else if (isPostBoilSg) updateMetric('postBoilGravityActual', measurements.postBoilGravityActual, -0.001, recipe?.og || 1.045);
-                            }}
-                            className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-xs font-bold font-mono border border-slate-700 touch-press flex items-center justify-center ${
-                              isMashPh ? 'text-cyan-400' : isPreBoilSg ? 'text-emerald-400' : 'text-purple-400'
-                            }`}
+                            onClick={() => updateMetric(stepper.key, measurements[stepper.key], -stepper.step, stepper.defaultValue)}
+                            className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-xs font-bold font-mono border border-slate-700 touch-press flex items-center justify-center ${STEPPER_COLORS[stepper.color].button}`}
                             title="Decrease"
                           >
-                            {isMashPh ? '-0.05' : '-1pt'}
+                            -{stepper.stepLabel}
                           </button>
 
                           {/* Value Display (Centered between - and + for ergonomic thumb stepping) */}
-                          <span className={`text-xs sm:text-sm font-black font-mono px-2.5 py-1 rounded-lg bg-slate-950 border min-w-[56px] text-center ${
-                            isMashPh
-                              ? 'text-cyan-300 border-cyan-800/60'
-                              : isPreBoilSg
-                              ? 'text-emerald-300 border-emerald-800/60'
-                              : 'text-purple-300 border-purple-800/60'
-                          }`}>
-                            {isMashPh
-                              ? (measurements.mashPhActual ? measurements.mashPhActual.toFixed(2) : '5.25')
-                              : isPreBoilSg
-                              ? (measurements.preBoilGravityActual ? measurements.preBoilGravityActual.toFixed(3) : (recipe?.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '1.039'))
-                              : (measurements.postBoilGravityActual ? measurements.postBoilGravityActual.toFixed(3) : (recipe?.og ? recipe.og.toFixed(3) : '1.045'))
-                            }
+                          <span className={`text-xs sm:text-sm font-black font-mono px-2.5 py-1 rounded-lg bg-slate-950 border min-w-[56px] text-center ${STEPPER_COLORS[stepper.color].value}`}>
+                            {(measurements[stepper.key] ?? stepper.defaultValue).toFixed(stepper.decimals)}{stepper.suffix}
                           </span>
 
                           {/* Stepper + */}
                           <button
                             type="button"
-                            onClick={() => {
-                              if (isMashPh) updateMetric('mashPhActual', measurements.mashPhActual, 0.05, 5.25);
-                              else if (isPreBoilSg) updateMetric('preBoilGravityActual', measurements.preBoilGravityActual, 0.001, recipe?.preBoilGravity || 1.039);
-                              else if (isPostBoilSg) updateMetric('postBoilGravityActual', measurements.postBoilGravityActual, 0.001, recipe?.og || 1.045);
-                            }}
-                            className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-xs font-bold font-mono border border-slate-700 touch-press flex items-center justify-center ${
-                              isMashPh ? 'text-cyan-400' : isPreBoilSg ? 'text-emerald-400' : 'text-purple-400'
-                            }`}
+                            onClick={() => updateMetric(stepper.key, measurements[stepper.key], stepper.step, stepper.defaultValue)}
+                            className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-xs font-bold font-mono border border-slate-700 touch-press flex items-center justify-center ${STEPPER_COLORS[stepper.color].button}`}
                             title="Increase"
                           >
-                            {isMashPh ? '+0.05' : '+1pt'}
+                            +{stepper.stepLabel}
                           </button>
                         </div>
                       </div>
@@ -729,7 +748,15 @@ export const StageFeed: React.FC = () => {
                   <span className="text-amber-400 font-bold">
                     {measurements.strikeTempActual !== undefined
                       ? `${measurements.strikeTempActual.toFixed(1)}°C`
-                      : `${(currentStage.parameters.targetTemp ?? 71.5).toFixed(1)}°C (target)`}
+                      : `${(stages.find(s => s.id === 'WATER_PREP')?.parameters.targetTemp ?? 71.5).toFixed(1)}°C (target)`}
+                  </span>
+                </div>
+                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
+                  <span className="text-gray-400">Mash In Temp</span>
+                  <span className="text-amber-400 font-bold">
+                    {measurements.mashInTempActual !== undefined
+                      ? `${measurements.mashInTempActual.toFixed(1)}°C`
+                      : `${(recipe?.mash?.steps?.[0]?.stepTemp ?? 65).toFixed(1)}°C (target)`}
                   </span>
                 </div>
                 <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
