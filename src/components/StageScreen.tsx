@@ -72,15 +72,14 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     ? (currentStage.id === 'BOIL' ? 'Flameout' : 'End')
     : `${Math.round(sec / 60)}m left`;
 
-  // Items due at the very start were just confirmed on the stage card, so they don't flash
+  // Items due at the start (e.g. all Whirlpool hops) flash for the first minute after Start
   const isFlashing = (sec: number) =>
     timerStatus !== 'idle' &&
-    sec < currentStage.plannedDurationSec &&
     activeRemainingSec <= sec &&
     activeRemainingSec > sec - FLASH_SEC;
 
-  // Countdown stages list their timed items, which drop off once done (after their minute of flashing).
-  // Other stages list their additions and reminders as a plain reference: everything was confirmed on the card.
+  // Countdown stages list their timed items; finished ones stay, ticked and greyed, so the stage's
+  // additions are always visible. Other stages list their additions and reminders as a plain reference.
   const planItems: PlanItem[] = isCountdown
     ? [
         ...currentStage.additions.map(a => ({
@@ -102,9 +101,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             done: DONE_CARD_READING_IDS.includes(c.id) ? c.checked : isTimedItemDone(c.id, c.checked),
             flashing: isFlashing(c.triggerRemainingSec!)
           }))
-      ]
-        .filter(item => !item.done || item.flashing)
-        .sort((a, b) => b.sec - a.sec)
+      ].sort((a, b) => b.sec - a.sec)
     : [
         ...currentStage.additions.map(a => ({
           id: a.id,
