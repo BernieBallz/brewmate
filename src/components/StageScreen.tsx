@@ -24,6 +24,8 @@ interface PlanItem {
   done: boolean;
   // Its time has just arrived: highlighted for a minute, no confirmation needed
   flashing?: boolean;
+  // First minute after Start with nothing due yet: the first item to come is flagged as a heads-up
+  headsUp?: boolean;
 }
 
 // How long a timed item flashes in the stage plan once its time arrives
@@ -78,10 +80,9 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     activeRemainingSec <= sec &&
     activeRemainingSec > sec - FLASH_SEC;
 
-  // Countdown stages list their timed items; finished ones stay, ticked and greyed, so the stage's
-  // additions are always visible. Other stages list their additions and reminders as a plain reference.
-  const planItems: PlanItem[] = isCountdown
-    ? [
+  // Countdown stages list their timed items, which drop off once done (after their minute of flashing).
+  // Other stages list their additions and reminders as a plain reference: everything was confirmed on the card.
+  const timedPlanItems: PlanItem[] = [
         ...currentStage.additions.map(a => ({
           id: a.id,
           sec: a.triggerRemainingSec,
@@ -101,7 +102,17 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             done: DONE_CARD_READING_IDS.includes(c.id) ? c.checked : isTimedItemDone(c.id, c.checked),
             flashing: isFlashing(c.triggerRemainingSec!)
           }))
-      ].sort((a, b) => b.sec - a.sec)
+      ]
+        .filter(item => !item.done || item.flashing)
+        .sort((a, b) => b.sec - a.sec);
+
+  const isFirstMinute = timerStatus !== 'idle' && activeRemainingSec > currentStage.plannedDurationSec - FLASH_SEC;
+  if (isFirstMinute && timedPlanItems.length > 0 && !timedPlanItems.some(item => item.flashing)) {
+    timedPlanItems[0] = { ...timedPlanItems[0], headsUp: true };
+  }
+
+  const planItems: PlanItem[] = isCountdown
+    ? timedPlanItems
     : [
         ...currentStage.additions.map(a => ({
           id: a.id,
@@ -237,11 +248,17 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             <li
               key={item.id}
               className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
-                item.flashing ? 'bg-emerald-500/20 text-white font-bold animate-pulse' : item.done ? 'text-gray-500' : 'text-gray-200'
+                item.flashing
+                  ? 'bg-emerald-500/20 text-white font-bold animate-pulse'
+                  : item.headsUp
+                  ? 'bg-amber-500/15 text-white font-bold animate-pulse'
+                  : item.done ? 'text-gray-500' : 'text-gray-200'
               }`}
             >
               {item.flashing ? (
                 <span className="w-4 h-4 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+              ) : item.headsUp ? (
+                <span className="w-4 h-4 shrink-0 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.9)]" />
               ) : item.done ? (
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />
               ) : (
@@ -249,9 +266,9 @@ export const StageScreen: React.FC<StageScreenProps> = ({
               )}
               {item.when && (
                 <span className={`shrink-0 w-[4.5rem] text-[11px] font-mono font-bold uppercase ${
-                  item.flashing ? 'text-emerald-300' : item.done ? 'text-gray-600' : 'text-cyan-300'
+                  item.flashing ? 'text-emerald-300' : item.headsUp ? 'text-amber-300' : item.done ? 'text-gray-600' : 'text-cyan-300'
                 }`}>
-                  {item.flashing ? 'Now' : item.when}
+                  {item.flashing ? 'Now' : item.headsUp ? 'Next' : item.when}
                 </span>
               )}
               <span className={`min-w-0 truncate ${item.done && !item.flashing ? 'line-through' : ''}`}>{item.text}</span>
