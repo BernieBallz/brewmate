@@ -248,17 +248,17 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             <li
               key={item.id}
               className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
-                item.flashing
-                  ? 'bg-emerald-500/20 text-white font-bold animate-pulse'
-                  : item.headsUp
-                  ? 'bg-amber-500/15 text-white font-bold animate-pulse'
-                  : item.done ? 'text-gray-500' : 'text-gray-200'
+                item.flashing || item.headsUp ? 'text-white font-bold' : item.done ? 'text-gray-500' : 'text-gray-200'
               }`}
             >
-              {item.flashing ? (
-                <span className="w-4 h-4 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-              ) : item.headsUp ? (
-                <span className="w-4 h-4 shrink-0 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.9)]" />
+              {/* The bullet itself flashes: green when the item is due now, amber as the first-minute heads-up */}
+              {item.flashing || item.headsUp ? (
+                <span className="relative w-4 h-4 shrink-0 flex items-center justify-center">
+                  <span className={`absolute inset-0 rounded-full animate-ping ${item.flashing ? 'bg-emerald-400/70' : 'bg-amber-400/70'}`} />
+                  <span className={`relative w-4 h-4 rounded-full ${
+                    item.flashing ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]' : 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.9)]'
+                  }`} />
+                </span>
               ) : item.done ? (
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />
               ) : (
@@ -268,7 +268,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
                 <span className={`shrink-0 w-[4.5rem] text-[11px] font-mono font-bold uppercase ${
                   item.flashing ? 'text-emerald-300' : item.headsUp ? 'text-amber-300' : item.done ? 'text-gray-600' : 'text-cyan-300'
                 }`}>
-                  {item.flashing ? 'Now' : item.headsUp ? 'Next' : item.when}
+                  {item.flashing ? 'Now' : item.when}
                 </span>
               )}
               <span className={`min-w-0 truncate ${item.done && !item.flashing ? 'line-through' : ''}`}>{item.text}</span>
