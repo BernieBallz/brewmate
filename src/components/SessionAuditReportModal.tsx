@@ -327,8 +327,8 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
                   <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
                     <span className="text-[10px] text-gray-400 block font-mono">Chill Time (60°C)</span>
                     <span className="text-xs sm:text-sm font-bold text-cyan-400 font-mono">
-                      {stages.find(s => s.id === 'COOLING_RECIRC')?.actualDurationSec
-                        ? formatDurationOnly(stages.find(s => s.id === 'COOLING_RECIRC')!.actualDurationSec)
+                      {stages.find(s => s.id === 'CHILL')?.actualDurationSec
+                        ? formatDurationOnly(stages.find(s => s.id === 'CHILL')!.actualDurationSec)
                         : '--'}
                     </span>
                   </div>

@@ -17,7 +17,7 @@ describe('Brewfather Parser Regression Test', () => {
       'MASH_SCHEDULE',
       'LAUTER_SPARGE',
       'BOIL',
-      'COOLING_RECIRC',
+      'CHILL',
       'KNOCKOUT_TRANSFER',
       'YEAST_PITCH',
       'CLEANUP',
@@ -52,7 +52,7 @@ describe('Brewfather Parser Regression Test', () => {
     expect(stages.find(s => s.id === 'MASH_SCHEDULE')?.flow.startLabel).toBe('START MASH REST');
     expect(stages.find(s => s.id === 'LAUTER_SPARGE')?.flow.startLabel).toBe('START SPARGE');
     expect(stages.find(s => s.id === 'BOIL')?.flow.startLabel).toBe('START BOIL');
-    expect(stages.find(s => s.id === 'COOLING_RECIRC')?.flow.startLabel).toBe('START CHILL');
+    expect(stages.find(s => s.id === 'CHILL')?.flow.startLabel).toBe('START CHILL');
     expect(stages.find(s => s.id === 'KNOCKOUT_TRANSFER')?.flow.startLabel).toBe('START KNOCKOUT');
     expect(stages.find(s => s.id === 'YEAST_PITCH')?.flow.startLabel).toBe('DONE');
     expect(stages.find(s => s.id === 'CLEANUP')?.flow.startLabel).toBe('FINISH BREW');
@@ -103,7 +103,7 @@ describe('Brewfather Parser Regression Test', () => {
     const boil = stages.find(s => s.id === 'BOIL')!;
     expect(boil.checklist.map(c => c.id)).not.toContain('whirlpool-prep');
 
-    const chill = stages.find(s => s.id === 'COOLING_RECIRC')!;
+    const chill = stages.find(s => s.id === 'CHILL')!;
     expect(chill.checklist.map(c => c.label)).toContain('Transfer hose');
 
     const pitch = stages.find(s => s.id === 'YEAST_PITCH')!;
@@ -121,7 +121,7 @@ describe('Brewfather Parser Regression Test', () => {
     // Stopwatch stages record actual time; plannedDurationSec is only an estimate
     expect(byId('LAUTER_SPARGE').timerType).toBe('stopwatch');
     expect(byId('LAUTER_SPARGE').plannedDurationSec).toBe(60 * 60);
-    expect(byId('COOLING_RECIRC').plannedDurationSec).toBe(20 * 60);
+    expect(byId('CHILL').plannedDurationSec).toBe(20 * 60);
     expect(byId('KNOCKOUT_TRANSFER').plannedDurationSec).toBe(60 * 60);
   });
 
@@ -136,7 +136,7 @@ describe('Brewfather Parser Regression Test', () => {
     const boil = byId('BOIL');
     expect(boil.checklist.at(-1)?.id).toBe('hx-hot-sanitize');
     expect(boil.checklist.at(-1)?.label).toBe('Sanitise loop');
-    expect(byId('COOLING_RECIRC').checklist.map(c => c.id)).not.toContain('hx-hot-sanitize');
+    expect(byId('CHILL').checklist.map(c => c.id)).not.toContain('hx-hot-sanitize');
 
     const whirlpool = byId('HOPSTAND_WHIRLPOOL');
     expect(whirlpool.checklist[0].label).toBe(`Cool to ${whirlpool.parameters.targetTemp}°C`);

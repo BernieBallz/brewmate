@@ -1462,6 +1462,13 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
         // Migrate any legacy stage labels if present in persisted state
         if (state.stages && state.stages.length > 0) {
+          // The Chill stage's id was COOLING_RECIRC (also on its log entries)
+          for (const stage of state.stages) {
+            if ((stage.id as string) === 'COOLING_RECIRC') stage.id = 'CHILL';
+          }
+          for (const log of state.auditLogs ?? []) {
+            if ((log.stageId as string) === 'COOLING_RECIRC') log.stageId = 'CHILL';
+          }
           const mashIn = state.stages.find(s => s.id === 'MASH_IN');
           if (mashIn) {
             if (mashIn.flow?.startLabel === 'GRAIN IN') {
@@ -1569,7 +1576,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           const legacyStageUpdates: Record<string, { title?: [string, string]; shortCode?: [string, string]; estimateSec?: [number, number] }> = {
             MASH_SCHEDULE: { shortCode: ['MASH', 'MASH REST'] },
             LAUTER_SPARGE: { title: ['Lauter & Sparge', 'Sparge'], shortCode: ['LAUTER', 'SPARGE'], estimateSec: [2700, 3600] },
-            COOLING_RECIRC: { title: ['Cooling Recirc', 'Chill'], estimateSec: [600, 1200] },
+            CHILL: { title: ['Cooling Recirc', 'Chill'], estimateSec: [600, 1200] },
             KNOCKOUT_TRANSFER: { estimateSec: [1500, 3600] }
           };
           for (const stage of state.stages) {
@@ -1588,7 +1595,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
           // Sanitise loop moved from Chill to the end of the Boil (keeps its ticked state)
           const boilStage = state.stages.find(s => s.id === 'BOIL');
-          const chillStage = state.stages.find(s => s.id === 'COOLING_RECIRC');
+          const chillStage = state.stages.find(s => s.id === 'CHILL');
           const sanitiseItem = chillStage?.checklist.find(c => c.id === 'hx-hot-sanitize');
           if (boilStage && chillStage && sanitiseItem) {
             chillStage.checklist = chillStage.checklist.filter(c => c.id !== 'hx-hot-sanitize');

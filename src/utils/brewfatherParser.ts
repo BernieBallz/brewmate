@@ -401,7 +401,7 @@ export function buildCoolingRecircStage(
   };
 
   return {
-    id: 'COOLING_RECIRC',
+    id: 'CHILL',
     index: 6,
     title: 'Chill',
     shortCode: 'CHILL',

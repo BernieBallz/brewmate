@@ -71,7 +71,7 @@ export const generateTelemetryData = (options: TelemetryExportOptions) => {
   const brewSessionDateFormatted = brewSessionDateObj.toLocaleDateString();
 
   const lauterStage = stages.find((s) => s.id === 'LAUTER_SPARGE');
-  const coolingStage = stages.find((s) => s.id === 'COOLING_RECIRC');
+  const coolingStage = stages.find((s) => s.id === 'CHILL');
   const knockoutStage = stages.find((s) => s.id === 'KNOCKOUT_TRANSFER');
 
   const allAdditions = stages.flatMap((s) =>
@@ -131,7 +131,7 @@ export const generateTelemetryData = (options: TelemetryExportOptions) => {
       postBoilGravityActual: measurements.postBoilGravityActual ?? null,
       knockoutTempActualC: measurements.knockoutTempActual ?? null,
       lauterDurationSec: lauterStage?.actualDurationSec || 0,
-      coolingDurationSec: coolingStage?.actualDurationSec || 0,
+      chillDurationSec: coolingStage?.actualDurationSec || 0,
       knockoutDurationSec: knockoutStage?.actualDurationSec || 0
     },
     stages: stages.map((s, idx) => ({
@@ -437,7 +437,7 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
   if (lauterStage && lauterStage.actualDurationSec > 0) {
     lines.push(`- **Sparge Time**: ${formatDurationOnly(lauterStage.actualDurationSec)} (Stopwatch)`);
   }
-  const coolingStage = stages.find((s) => s.id === 'COOLING_RECIRC');
+  const coolingStage = stages.find((s) => s.id === 'CHILL');
   if (coolingStage && coolingStage.actualDurationSec > 0) {
     lines.push(
       `- **Cooling & Recirc (Chill to 60°C) Duration**: ${formatDurationOnly(coolingStage.actualDurationSec)} (Stopwatch)`

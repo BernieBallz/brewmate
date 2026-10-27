@@ -7,7 +7,7 @@ export type StageId =
   | 'PRE_BOIL_HEAT'
   | 'BOIL'
   | 'HOPSTAND_WHIRLPOOL'
-  | 'COOLING_RECIRC'
+  | 'CHILL'
   | 'KNOCKOUT_TRANSFER'
   | 'YEAST_PITCH'
   | 'CLEANUP';

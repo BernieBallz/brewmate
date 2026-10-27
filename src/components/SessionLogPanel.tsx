@@ -9,7 +9,7 @@ export const SessionLogPanel: React.FC = () => {
   const recipe = useBrewStore(state => state.recipe);
 
   const lauterStage = stages.find(s => s.id === 'LAUTER_SPARGE');
-  const coolingStage = stages.find(s => s.id === 'COOLING_RECIRC');
+  const coolingStage = stages.find(s => s.id === 'CHILL');
   const knockoutStage = stages.find(s => s.id === 'KNOCKOUT_TRANSFER');
 
   return (
