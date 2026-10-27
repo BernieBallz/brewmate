@@ -117,7 +117,8 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           id: a.id,
           when: getAdditionBadge(a, currentStage.id, boilTime).label,
           text: `${a.amount} ${a.unit || 'g'} ${a.name}`,
-          done: false
+          // Additions go in as the stage starts (e.g. sparge salts), so they're struck through once it has
+          done: timerStatus !== 'idle' || flowPhase === 'finished'
         })),
         ...currentStage.checklist
           .filter(c => !(currentStage.additions.length > 0 && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)))
