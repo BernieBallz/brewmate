@@ -13,10 +13,18 @@ import {
   ChevronDown,
   Download,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  ScrollText,
+  Bell
 } from 'lucide-react';
+import type { FlowMode } from '../types/session';
 import { appLifecycle, type UpdateCheckResult } from '../utils/appLifecycle';
 import { useAppUpdateReady, useCanInstallApp } from '../hooks/useAppLifecycle';
+
+const FLOW_OPTIONS: { mode: FlowMode; label: string; hint: string }[] = [
+  { mode: 'full', label: 'Full step', hint: 'Tick each reminder and addition as you go' },
+  { mode: 'byStage', label: 'By stage', hint: 'Confirm each stage in one go, full-screen timer' }
+];
 
 const formatBuildTime = (iso: string): string => {
   const date = new Date(iso);
@@ -33,6 +41,8 @@ interface MenuDrawerProps {
   onOpenResetConfirm: () => void;
   onOpenRemoveConfirm: () => void;
   onConfirmJump: (stageIndex: number) => void;
+  onOpenSessionLog: () => void;
+  onOpenAlertSetup: () => void;
 }
 
 export const MenuDrawer: React.FC<MenuDrawerProps> = ({
@@ -42,7 +52,9 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   onOpenReportModal,
   onOpenResetConfirm,
   onOpenRemoveConfirm,
-  onConfirmJump
+  onConfirmJump,
+  onOpenSessionLog,
+  onOpenAlertSetup
 }) => {
   const { 
     stages, 
@@ -53,7 +65,9 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
     wakeLockActive,
     toggleWakeLock,
     recipe,
-    timerStatus
+    timerStatus,
+    flowMode,
+    setFlowMode
   } = useBrewStore();
 
   const canInstall = useCanInstallApp();
@@ -126,6 +140,46 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
             Session Tools
           </span>
 
+          {/* Brew flow: remembered on this device between sessions */}
+          <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1.5">
+            <span className="block text-[10px] font-mono text-gray-400 uppercase tracking-wider">Brew flow</span>
+            <div role="radiogroup" aria-label="Brew flow" className="grid grid-cols-2 gap-1">
+              {FLOW_OPTIONS.map(option => (
+                <button
+                  key={option.mode}
+                  type="button"
+                  role="radio"
+                  aria-checked={flowMode === option.mode}
+                  onClick={() => {
+                    setFlowMode(option.mode);
+                    onClose();
+                  }}
+                  className={`py-1.5 rounded-md text-xs font-mono font-bold border transition-colors touch-press ${
+                    flowMode === option.mode
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/50'
+                      : 'text-gray-400 hover:text-gray-200 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <span className="block text-[11px] text-gray-400 leading-snug">
+              {FLOW_OPTIONS.find(option => option.mode === flowMode)?.hint}
+            </span>
+          </div>
+
+          <button
+            onClick={() => {
+              onOpenSessionLog();
+              onClose();
+            }}
+            className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"
+          >
+            <ScrollText className="w-4 h-4 text-emerald-400" />
+            <span>Session Log</span>
+          </button>
+
           <button
             onClick={() => {
               onOpenReportModal();
@@ -193,6 +247,17 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
 
           {isAdvancedOpen && (
             <>
+              <button
+                onClick={() => {
+                  onOpenAlertSetup();
+                  onClose();
+                }}
+                className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"
+              >
+                <Bell className="w-4 h-4 text-amber-400" />
+                <span>Notifications</span>
+              </button>
+
               <button
                 onClick={toggleAudio}
                 className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"

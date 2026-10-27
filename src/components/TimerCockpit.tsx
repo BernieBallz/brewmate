@@ -3,6 +3,7 @@ import { useBrewStore } from '../store/brewStore';
 import { useStageTimerView, formatTime, formatWaitCountdown } from '../hooks/useStageTimerView';
 import { CountdownProgressBar } from './CountdownProgressBar';
 import { StageActions } from './StageActions';
+import { StrikeOffsetControl } from './StrikeOffsetControl';
 import {
   Thermometer,
   Droplets,
@@ -19,9 +20,6 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
   onConfirmAdvance,
   onOpenReportModal
 }) => {
-  const strikeOffset = useBrewStore(state => state.strikeOffset);
-  const recipe = useBrewStore(state => state.recipe);
-  const setStrikeOffset = useBrewStore(state => state.setStrikeOffset);
   const toggleChecklistItem = useBrewStore(state => state.toggleChecklistItem);
 
   const {
@@ -39,10 +37,6 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
     immediateUncheckedReminder,
     nextTimedEvent
   } = useStageTimerView();
-
-  const mashStep = recipe?.mash?.steps?.[0];
-  const mashTemp = mashStep?.stepTemp || 65;
-  const targetStrikeTemp = Number((mashTemp + strikeOffset).toFixed(1));
 
   return (
     <div className="flex flex-col justify-between h-full min-h-0 bg-slate-900/95 rounded-xl border border-brew-border p-2.5 sm:p-3 shadow-lg select-none overflow-y-auto overflow-x-hidden">
@@ -237,35 +231,7 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
             <CheckCircle2 className="w-8 h-8 text-emerald-400 mb-1" />
             <h3 className="text-sm sm:text-base font-bold text-gray-100 mb-2">{currentStage?.title}</h3>
 
-            <div className="text-[11px] font-mono text-amber-400 font-bold uppercase tracking-wider mb-1 flex items-center space-x-1">
-              <Thermometer className="w-3.5 h-3.5 mr-1" />
-              <span>Mash {mashTemp}°C + Offset {strikeOffset >= 0 ? `+${strikeOffset}` : strikeOffset}°C</span>
-            </div>
-
-            {/* Stepper buttons flanking the strike temperature with large touch targets */}
-            <div className="flex items-center justify-center space-x-2.5 my-0.5">
-              <button
-                type="button"
-                onClick={() => setStrikeOffset(strikeOffset - 0.5)}
-                className="w-14 h-10 sm:h-11 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 text-sm font-black font-mono text-amber-400 touch-press shadow flex items-center justify-center"
-                title="Decrease strike offset"
-              >
-                -0.5°
-              </button>
-
-              <div className="font-mono font-black text-4xl sm:text-5xl text-amber-300 hud-glow tracking-tight px-1 leading-none">
-                {targetStrikeTemp.toFixed(1)}°C
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setStrikeOffset(strikeOffset + 0.5)}
-                className="w-14 h-10 sm:h-11 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 text-sm font-black font-mono text-amber-400 touch-press shadow flex items-center justify-center"
-                title="Increase strike offset"
-              >
-                +0.5°
-              </button>
-            </div>
+            <StrikeOffsetControl />
           </div>
         ) : (
           /* Case D: Other Confirm Stages (Mash In, Yeast Pitch, Clean Up) */

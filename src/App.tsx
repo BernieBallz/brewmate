@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useBrewStore, CONFIRM_ADVANCE_EVENT } from './store/brewStore';
+import { useBrewStore, CONFIRM_ADVANCE_EVENT, DONE_CARD_EVENT } from './store/brewStore';
 import { HeaderBar } from './components/HeaderBar';
 import { LandscapeHUD } from './components/LandscapeHUD';
 import { PortraitHUD } from './components/PortraitHUD';
@@ -12,6 +12,11 @@ import { ResetConfirmModal, type SessionClearMode } from './components/ResetConf
 import { MenuDrawer } from './components/MenuDrawer';
 import { NotificationSetupModal } from './components/NotificationSetupModal';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { StageScreen } from './components/StageScreen';
+import { StageCard } from './components/StageCard';
+import { DoneCard } from './components/DoneCard';
+import { DueBanner } from './components/DueBanner';
+import { SessionLogSheet } from './components/SessionLogSheet';
 import { notificationManager } from './utils/notificationManager';
 
 const ALERT_PROMPT_SEEN_KEY = 'brewmate_alert_prompt_seen';
@@ -28,6 +33,20 @@ const shouldAutoOpenAlertSetup = (): boolean => {
 
 export function App() {
   const { tick, currentStageIndex, stages, reconcileTimerWithWallClock } = useBrewStore();
+  const isByStage = useBrewStore(state => state.flowMode === 'byStage');
+  const stageCardRequested = useBrewStore(state => state.stageCardRequested);
+  const clearStageCardRequest = useBrewStore(state => state.clearStageCardRequest);
+
+  // By stage cards and the menu's Session Log sheet
+  const [isStageCardOpen, setIsStageCardOpen] = useState(false);
+  const [isDoneCardOpen, setIsDoneCardOpen] = useState(false);
+  const [isSessionLogOpen, setIsSessionLogOpen] = useState(false);
+  // Switching to By stage mid-stage with items still to confirm opens the stage card straight away
+  const showStageCard = isStageCardOpen || stageCardRequested;
+  const closeStageCard = () => {
+    setIsStageCardOpen(false);
+    clearStageCardRequest();
+  };
 
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
@@ -76,6 +95,13 @@ export function App() {
     };
     window.addEventListener(CONFIRM_ADVANCE_EVENT, openNextStageConfirm);
     return () => window.removeEventListener(CONFIRM_ADVANCE_EVENT, openNextStageConfirm);
+  }, []);
+
+  // Lock-screen "Next Stage" in By stage with a reading still to record opens the Done card
+  useEffect(() => {
+    const openDoneCard = () => setIsDoneCardOpen(true);
+    window.addEventListener(DONE_CARD_EVENT, openDoneCard);
+    return () => window.removeEventListener(DONE_CARD_EVENT, openDoneCard);
   }, []);
 
   // Mobile standby / sleep wake-up recovery
@@ -142,12 +168,22 @@ export function App() {
         />
       </div>
 
-      {/* 2. Top Header Bar (36px) */}
-      <HeaderBar onOpenMenu={() => setIsMenuDrawerOpen(true)} onOpenAlerts={() => setIsAlertSetupOpen(true)} />
+      {/* 2. Top Header Bar (36px); the By stage screen carries its own menu button instead */}
+      {!isByStage && (
+        <HeaderBar onOpenMenu={() => setIsMenuDrawerOpen(true)} onOpenAlerts={() => setIsAlertSetupOpen(true)} />
+      )}
 
       {/* 3. Main Interactive Cockpit Area (Takes 100% of remaining vertical height) */}
       <main className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
-        {isLandscape ? (
+        {isByStage ? (
+          <StageScreen
+            onOpenMenu={() => setIsMenuDrawerOpen(true)}
+            onConfirmAdvance={() => openAdvanceModal()}
+            onOpenReportModal={() => setIsReportModalOpen(true)}
+            onOpenStageCard={() => setIsStageCardOpen(true)}
+            onOpenDoneCard={() => setIsDoneCardOpen(true)}
+          />
+        ) : isLandscape ? (
           <LandscapeHUD
             onConfirmAdvance={() => openAdvanceModal()}
             onOpenReportModal={() => setIsReportModalOpen(true)}
@@ -163,6 +199,10 @@ export function App() {
       {/* Overlays & Modals */}
       <AdditionModal />
       <TaskAlertModal />
+      <DueBanner />
+      {showStageCard && <StageCard onClose={closeStageCard} />}
+      {isDoneCardOpen && <DoneCard onClose={() => setIsDoneCardOpen(false)} />}
+      <SessionLogSheet isOpen={isSessionLogOpen} onClose={() => setIsSessionLogOpen(false)} />
 
       <MenuDrawer
         isOpen={isMenuDrawerOpen}
@@ -172,6 +212,8 @@ export function App() {
         onOpenResetConfirm={() => openSessionClearConfirm('reset')}
         onOpenRemoveConfirm={() => openSessionClearConfirm('remove')}
         onConfirmJump={(stageIndex) => openAdvanceModal(stageIndex)}
+        onOpenSessionLog={() => setIsSessionLogOpen(true)}
+        onOpenAlertSetup={() => setIsAlertSetupOpen(true)}
       />
 
       <ConfirmAdvanceModal

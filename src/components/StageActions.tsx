@@ -1,5 +1,5 @@
 import React from 'react';
-import { useBrewStore, hasIncompleteStageItems } from '../store/brewStore';
+import { useBrewStore, hasIncompleteStageItems, hasStageCardItems, getPendingEndReadings } from '../store/brewStore';
 import { useStageTimerView } from '../hooks/useStageTimerView';
 import {
   Play,
@@ -16,10 +16,19 @@ interface StageActionsProps {
   onOpenReportModal?: () => void;
   // 'large' gives taller buttons and bigger type for the full-screen By stage view
   size?: 'normal' | 'large';
+  // By stage: Start/Done opens the stage card, Next opens the Done card when readings are due
+  onOpenStageCard?: () => void;
+  onOpenDoneCard?: () => void;
 }
 
 // Primary flow controls for the current stage: Start / Pause / Resume / +1m / +5m / Stop / Done / Next
-export const StageActions: React.FC<StageActionsProps> = ({ onConfirmAdvance, onOpenReportModal, size = 'normal' }) => {
+export const StageActions: React.FC<StageActionsProps> = ({
+  onConfirmAdvance,
+  onOpenReportModal,
+  size = 'normal',
+  onOpenStageCard,
+  onOpenDoneCard
+}) => {
   const startTimer = useBrewStore(state => state.startTimer);
   const pauseTimer = useBrewStore(state => state.pauseTimer);
   const resumeTimer = useBrewStore(state => state.resumeTimer);
@@ -27,12 +36,21 @@ export const StageActions: React.FC<StageActionsProps> = ({ onConfirmAdvance, on
   const confirmFlowStage = useBrewStore(state => state.confirmFlowStage);
   const nextStage = useBrewStore(state => state.nextStage);
   const extendTimer = useBrewStore(state => state.extendTimer);
+  const isByStage = useBrewStore(state => state.flowMode === 'byStage');
 
   const { currentStage, flow, flowPhase, timerStatus, isSessionDone, isCountdownDone } = useStageTimerView();
 
   // Moving on with additions unconfirmed or reminders unticked goes through the Complete Stage dialog, which lists them
   const hasIncompleteItems = hasIncompleteStageItems(currentStage);
   const guardAdvance = (advance: () => void) => () => (hasIncompleteItems ? onConfirmAdvance() : advance());
+
+  // By stage: starting a stage goes through its stage card while anything is left to confirm,
+  // and moving on goes through the Done card while a later reading is unrecorded
+  const guardStart = (start: () => void) => () =>
+    (isByStage && onOpenStageCard && hasStageCardItems(currentStage) ? onOpenStageCard() : start());
+  const guardNext = isByStage
+    ? () => (onOpenDoneCard && getPendingEndReadings(currentStage).length > 0 ? onOpenDoneCard() : nextStage())
+    : guardAdvance(nextStage);
 
   const isLarge = size === 'large';
   const primarySize = isLarge
@@ -59,7 +77,7 @@ export const StageActions: React.FC<StageActionsProps> = ({ onConfirmAdvance, on
       ) : flow.kind === 'confirm' ? (
         /* Case 1: Confirm Stages (Single dominant button) */
         <button
-          onClick={guardAdvance(confirmFlowStage)}
+          onClick={isByStage ? guardStart(confirmFlowStage) : guardAdvance(confirmFlowStage)}
           className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]`}
         >
           <CheckCircle2 className="w-5 h-5 text-emerald-400 stroke-[2.5]" />
@@ -71,7 +89,7 @@ export const StageActions: React.FC<StageActionsProps> = ({ onConfirmAdvance, on
           {isCountdownDone ? (
             // Finished Countdown State -> NEXT Button
             <button
-              onClick={guardAdvance(nextStage)}
+              onClick={guardNext}
               className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]`}
             >
               <span>{flow.nextLabel || 'NEXT STAGE'}</span>
@@ -128,7 +146,7 @@ export const StageActions: React.FC<StageActionsProps> = ({ onConfirmAdvance, on
           ) : (
             // Ready Countdown State -> START button
             <button
-              onClick={() => startTimer()}
+              onClick={guardStart(startTimer)}
               className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]`}
             >
               <Play className="w-5 h-5 fill-current" />
@@ -142,7 +160,7 @@ export const StageActions: React.FC<StageActionsProps> = ({ onConfirmAdvance, on
           {flowPhase === 'finished' ? (
             // Finished Stopwatch State -> NEXT Button
             <button
-              onClick={guardAdvance(nextStage)}
+              onClick={guardNext}
               className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]`}
             >
               <span>{flow.nextLabel || 'NEXT STAGE'}</span>
@@ -160,7 +178,7 @@ export const StageActions: React.FC<StageActionsProps> = ({ onConfirmAdvance, on
           ) : (
             // Ready Stopwatch State -> START Button
             <button
-              onClick={() => startTimer()}
+              onClick={guardStart(startTimer)}
               className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-cyan-950/80 hover:bg-cyan-900 active:bg-cyan-800 text-cyan-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.35)]`}
             >
               <Play className="w-5 h-5 fill-current" />
