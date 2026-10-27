@@ -172,6 +172,4 @@ export interface BrewSessionState {
   // Timed items in the current stage already announced by the By stage due banner
   announcedDueIds: string[];
   activeDueNotice: DueNotice | null;
-  // Set when switching to By stage mid-stage with items still to confirm; the UI opens the stage card
-  stageCardRequested: boolean;
 }

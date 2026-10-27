@@ -61,7 +61,7 @@ export const DoneCard: React.FC<DoneCardProps> = ({ mode = 'finish', onClose }) 
   const hasReadings = Object.keys(readings).length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150 select-none">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 select-none">
       <div
         role="dialog"
         aria-modal="true"
@@ -81,9 +81,10 @@ export const DoneCard: React.FC<DoneCardProps> = ({ mode = 'finish', onClose }) 
           </p>
         </div>
 
-        <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-1.5">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
+        <ul className="rounded-xl bg-slate-900/70 border border-slate-800 divide-y divide-slate-800/80">
           {pending.map(({ item, stepper }) => (
-            <li key={item.id} className="px-2.5 py-2 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-1.5">
+            <li key={item.id} className="px-3 py-2 space-y-1.5">
               <span className="block text-sm font-semibold text-gray-100">{item.label}</span>
               <MeasurementStepper
                 stepper={stepper}
@@ -99,6 +100,7 @@ export const DoneCard: React.FC<DoneCardProps> = ({ mode = 'finish', onClose }) 
             </li>
           ))}
         </ul>
+        </div>
 
         <div className="shrink-0 flex gap-2 px-4 pt-3 pb-4 border-t border-slate-800">
           <button

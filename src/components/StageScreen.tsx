@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS, DONE_CARD_READING_IDS, getDueReadings } from '../store/brewStore';
+import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS, DONE_CARD_READING_IDS, getDueReadings, hasStageCardItems } from '../store/brewStore';
 import { useStageTimerView, formatTime, formatWaitCountdown } from '../hooks/useStageTimerView';
 import { getAdditionBadge } from '../utils/additionDisplay';
 import { getReadingShortName } from '../utils/measurementSteppers';
 import { CountdownProgressBar } from './CountdownProgressBar';
 import { StageActions } from './StageActions';
 import { StrikeOffsetControl } from './StrikeOffsetControl';
+import { StagePrepare } from './StagePrepare';
 import { useFullscreen } from '../hooks/useFullscreen';
 import { useAppUpdateReady } from '../hooks/useAppLifecycle';
 import { Menu, Thermometer, Droplets, CheckCircle2, Check, Gauge, Maximize, Minimize } from 'lucide-react';
@@ -14,7 +15,6 @@ interface StageScreenProps {
   onOpenMenu: () => void;
   onConfirmAdvance: () => void;
   onOpenReportModal: () => void;
-  onOpenStageCard: () => void;
   onOpenDoneCard: () => void;
   onRecordReading: () => void;
 }
@@ -45,7 +45,6 @@ export const StageScreen: React.FC<StageScreenProps> = ({
   onOpenMenu,
   onConfirmAdvance,
   onOpenReportModal,
-  onOpenStageCard,
   onOpenDoneCard,
   onRecordReading
 }) => {
@@ -88,6 +87,9 @@ export const StageScreen: React.FC<StageScreenProps> = ({
 
   const boilTime = recipe?.boilTime || 60;
   const isCountdown = flow.kind === 'countdown';
+
+  // Prepare state: the stage still has items to confirm, so the screen shows its checklist instead of the timer
+  const isPreparing = !isSessionDone && hasStageCardItems(currentStage);
 
   // Stage plan: timed additions and prompts for countdown stages; otherwise the stage's additions and reminders
   const timedWhen = (sec: number) => sec >= currentStage.plannedDurationSec
@@ -226,8 +228,16 @@ export const StageScreen: React.FC<StageScreenProps> = ({
       </h1>
       </div>
 
-      {/* Hero: the timer, stopwatch or stage confirmation fills the free space */}
-      <div className="flex-1 min-h-[9rem] flex flex-col items-center justify-center text-center">
+      {isPreparing ? (
+        // Keyed by stage so each stage starts with fresh readings
+        <StagePrepare key={currentStageIndex} onConfirmAdvance={onConfirmAdvance} />
+      ) : (
+      <>
+      {/* Hero: the timer, stopwatch or stage confirmation fills the free space; eases in as Prepare ends */}
+      <div
+        key={`run-${currentStageIndex}`}
+        className="flex-1 min-h-[9rem] flex flex-col items-center justify-center text-center motion-safe:animate-stage-in"
+      >
         {isSessionDone ? (
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-emerald-950/90 border-2 border-emerald-500/80 flex items-center justify-center text-emerald-400 mb-2 shadow-[0_0_25px_rgba(16,185,129,0.4)]">
@@ -364,10 +374,11 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           size="large"
           onConfirmAdvance={onConfirmAdvance}
           onOpenReportModal={onOpenReportModal}
-          onOpenStageCard={onOpenStageCard}
           onOpenDoneCard={onOpenDoneCard}
         />
       </div>
+      </>
+      )}
     </div>
   );
 };

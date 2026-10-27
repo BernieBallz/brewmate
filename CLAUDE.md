@@ -22,7 +22,7 @@ Run `npm test`, `npm run lint` and `npm run build` before considering a change d
 - `src/components/` — `PortraitHUD` / `LandscapeHUD` layouts, `StageFeed`, `TimerCockpit`, modals
 - Two brew flows, chosen in the menu (`flowMode`, kept between sessions):
   - **Full step** (default) uses the HUD layouts above: tick each reminder and confirm each addition, with confirm modals when items come due.
-  - **By stage** uses `StageScreen`, a full-screen view with no header or tabs. `StageCard` confirms a stage's items in one go at the start, `DueBanner` replaces the confirm modals, and `DoneCard` collects the later readings in `DONE_CARD_READING_IDS`.
+  - **By stage** uses `StageScreen`, a full-screen view with no header or tabs. before a stage starts, `StagePrepare` shows its checklist on the same screen to confirm in one go, `DueBanner` replaces the confirm modals, and `DoneCard` collects the later readings in `DONE_CARD_READING_IDS`.
   - Both flows share `useStageTimerView`, `StageActions` and `CountdownProgressBar`.
 - No built-in recipe: the app opens on a welcome screen until one is loaded. Tests use the fictional `src/__tests__/fixtures/testRecipe.json`; never commit a real recipe
 - `.agents/skills/design-engineer/SKILL.md` — UI/mobile polish guidelines; follow them for UI work

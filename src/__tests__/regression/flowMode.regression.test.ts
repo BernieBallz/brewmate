@@ -15,6 +15,8 @@ const MASH_REST_INDEX = 2;
 const BOIL_INDEX = 4;
 const state = () => useBrewStore.getState();
 const boil = () => state().stages[BOIL_INDEX];
+// By stage shows the Prepare state (checklist instead of timer) while the current stage has items to confirm
+const isPreparing = () => state().flowMode === 'byStage' && hasStageCardItems(state().stages[state().currentStageIndex]);
 
 // Put the boil countdown into a running state directly, avoiding startTimer's device side effects
 const startBoilAt = (now: number) => {
@@ -236,37 +238,37 @@ describe('Brew flow mode (Full step / By stage) regression tests', () => {
   });
 
   describe('arriving at a stage', () => {
-    it('requests the next stage card on arrival in By stage', () => {
+    it('shows the next stage in Prepare on arrival in By stage', () => {
       state().setFlowMode('byStage');
       state().confirmStageCard();
-      expect(state().stageCardRequested).toBe(false);
+      expect(isPreparing()).toBe(false);
 
       state().nextStage(); // Boil -> Chill, which has reminders to confirm
-      expect(state().stageCardRequested).toBe(true);
+      expect(isPreparing()).toBe(true);
     });
 
-    it('does not request a card in Full step', () => {
+    it('never shows Prepare in Full step', () => {
       state().nextStage();
-      expect(state().stageCardRequested).toBe(false);
+      expect(isPreparing()).toBe(false);
     });
 
-    it('does not request a card for a stage with nothing left to confirm', () => {
+    it('skips Prepare for a stage with nothing left to confirm', () => {
       state().setFlowMode('byStage');
       state().goToStage(BOIL_INDEX + 1);
       state().confirmStageCard();
       state().goToStage(BOIL_INDEX); // back to Boil...
       state().confirmStageCard();
       state().goToStage(BOIL_INDEX + 1); // ...and into the already-confirmed Chill
-      expect(state().stageCardRequested).toBe(false);
+      expect(isPreparing()).toBe(false);
     });
 
-    it('opens the first stage card when a recipe loads in By stage only', () => {
+    it('opens the first stage in Prepare when a recipe loads in By stage', () => {
       state().loadRecipe(testRecipe as unknown as BrewfatherRecipe);
-      expect(state().stageCardRequested).toBe(false);
+      expect(isPreparing()).toBe(false);
 
       state().setFlowMode('byStage');
       state().loadRecipe(testRecipe as unknown as BrewfatherRecipe);
-      expect(state().stageCardRequested).toBe(true);
+      expect(isPreparing()).toBe(true);
     });
   });
 
@@ -302,19 +304,19 @@ describe('Brew flow mode (Full step / By stage) regression tests', () => {
   });
 
   describe('mid-stage switch', () => {
-    it('requests the stage card when the stage still has items to confirm', () => {
+    it('shows Prepare when switching mid-stage with items to confirm', () => {
       state().setFlowMode('byStage');
-      expect(state().stageCardRequested).toBe(true);
+      expect(isPreparing()).toBe(true);
       state().confirmStageCard();
-      expect(state().stageCardRequested).toBe(false);
+      expect(isPreparing()).toBe(false);
     });
 
-    it('does not request the card when everything is already confirmed', () => {
+    it('stays on the timer when everything is already confirmed', () => {
       state().setFlowMode('byStage');
       state().confirmStageCard();
       state().setFlowMode('full');
       state().setFlowMode('byStage');
-      expect(state().stageCardRequested).toBe(false);
+      expect(isPreparing()).toBe(false);
     });
   });
 });

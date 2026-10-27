@@ -13,7 +13,6 @@ import { MenuDrawer } from './components/MenuDrawer';
 import { NotificationSetupModal } from './components/NotificationSetupModal';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { StageScreen } from './components/StageScreen';
-import { StageCard } from './components/StageCard';
 import { DoneCard, type ReadingCardMode } from './components/DoneCard';
 import { DueBanner } from './components/DueBanner';
 import { SessionLogSheet } from './components/SessionLogSheet';
@@ -34,19 +33,10 @@ const shouldAutoOpenAlertSetup = (): boolean => {
 export function App() {
   const { tick, currentStageIndex, stages, reconcileTimerWithWallClock } = useBrewStore();
   const isByStage = useBrewStore(state => state.flowMode === 'byStage');
-  const stageCardRequested = useBrewStore(state => state.stageCardRequested);
-  const clearStageCardRequest = useBrewStore(state => state.clearStageCardRequest);
 
-  // By stage cards and the menu's Session Log sheet
-  const [isStageCardOpen, setIsStageCardOpen] = useState(false);
+  // By stage reading card and the menu's Session Log sheet
   const [doneCardMode, setDoneCardMode] = useState<ReadingCardMode | null>(null);
   const [isSessionLogOpen, setIsSessionLogOpen] = useState(false);
-  // Switching to By stage mid-stage with items still to confirm opens the stage card straight away
-  const showStageCard = isStageCardOpen || stageCardRequested;
-  const closeStageCard = () => {
-    setIsStageCardOpen(false);
-    clearStageCardRequest();
-  };
 
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
@@ -180,7 +170,6 @@ export function App() {
             onOpenMenu={() => setIsMenuDrawerOpen(true)}
             onConfirmAdvance={() => openAdvanceModal()}
             onOpenReportModal={() => setIsReportModalOpen(true)}
-            onOpenStageCard={() => setIsStageCardOpen(true)}
             onOpenDoneCard={() => setDoneCardMode('finish')}
             onRecordReading={() => setDoneCardMode('record')}
           />
@@ -201,8 +190,6 @@ export function App() {
       <AdditionModal />
       <TaskAlertModal />
       <DueBanner onRecord={() => setDoneCardMode('record')} />
-      {/* Keyed by stage so each stage's card starts with fresh readings */}
-      {showStageCard && <StageCard key={currentStageIndex} onClose={closeStageCard} />}
       {doneCardMode && <DoneCard mode={doneCardMode} onClose={() => setDoneCardMode(null)} />}
       <SessionLogSheet isOpen={isSessionLogOpen} onClose={() => setIsSessionLogOpen(false)} />
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useBrewStore, hasIncompleteStageItems, hasStageCardItems, getPendingEndReadings } from '../store/brewStore';
+import { useBrewStore, hasIncompleteStageItems, getPendingEndReadings } from '../store/brewStore';
 import { useStageTimerView } from '../hooks/useStageTimerView';
 import {
   Play,
@@ -16,8 +16,7 @@ interface StageActionsProps {
   onOpenReportModal?: () => void;
   // 'large' gives taller buttons and bigger type for the full-screen By stage view
   size?: 'normal' | 'large';
-  // By stage: Start/Done opens the stage card, Next opens the Done card when readings are due
-  onOpenStageCard?: () => void;
+  // By stage: Next opens the Done card when readings are due
   onOpenDoneCard?: () => void;
 }
 
@@ -26,7 +25,6 @@ export const StageActions: React.FC<StageActionsProps> = ({
   onConfirmAdvance,
   onOpenReportModal,
   size = 'normal',
-  onOpenStageCard,
   onOpenDoneCard
 }) => {
   const startTimer = useBrewStore(state => state.startTimer);
@@ -44,16 +42,10 @@ export const StageActions: React.FC<StageActionsProps> = ({
   const hasIncompleteItems = hasIncompleteStageItems(currentStage);
   const guardAdvance = (advance: () => void) => () => (hasIncompleteItems ? onConfirmAdvance() : advance());
 
-  // By stage: starting a stage goes through its stage card while anything is left to confirm,
-  // and moving on goes through the Done card while a later reading is unrecorded
-  const guardStart = (start: () => void) => () =>
-    (isByStage && onOpenStageCard && hasStageCardItems(currentStage) ? onOpenStageCard() : start());
+  // By stage: moving on goes through the Done card while a later reading is unrecorded
   const guardNext = isByStage
     ? () => (onOpenDoneCard && getPendingEndReadings(currentStage).length > 0 ? onOpenDoneCard() : nextStage())
     : guardAdvance(nextStage);
-
-  // By stage: a checklist stage whose card was dismissed reopens it rather than finishing ("DONE" would be misleading)
-  const confirmLabel = isByStage && onOpenStageCard && hasStageCardItems(currentStage) ? 'REVIEW & CONFIRM' : flow.startLabel;
 
   const isLarge = size === 'large';
   const primarySize = isLarge
@@ -80,11 +72,11 @@ export const StageActions: React.FC<StageActionsProps> = ({
       ) : flow.kind === 'confirm' ? (
         /* Case 1: Confirm Stages (Single dominant button) */
         <button
-          onClick={isByStage ? guardStart(confirmFlowStage) : guardAdvance(confirmFlowStage)}
+          onClick={isByStage ? confirmFlowStage : guardAdvance(confirmFlowStage)}
           className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]`}
         >
           <CheckCircle2 className="w-5 h-5 text-emerald-400 stroke-[2.5]" />
-          <span>{confirmLabel}</span>
+          <span>{flow.startLabel}</span>
         </button>
       ) : flow.kind === 'countdown' ? (
         /* Case 2: Countdown Stages */
@@ -149,7 +141,7 @@ export const StageActions: React.FC<StageActionsProps> = ({
           ) : (
             // Ready Countdown State -> START button
             <button
-              onClick={guardStart(startTimer)}
+              onClick={() => startTimer()}
               className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]`}
             >
               <Play className="w-5 h-5 fill-current" />
@@ -181,7 +173,7 @@ export const StageActions: React.FC<StageActionsProps> = ({
           ) : (
             // Ready Stopwatch State -> START Button
             <button
-              onClick={guardStart(startTimer)}
+              onClick={() => startTimer()}
               className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-cyan-950/80 hover:bg-cyan-900 active:bg-cyan-800 text-cyan-200 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.35)]`}
             >
               <Play className="w-5 h-5 fill-current" />

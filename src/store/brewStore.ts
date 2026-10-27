@@ -68,7 +68,6 @@ interface BrewStoreActions {
   setFlowMode: (mode: FlowMode) => void;
   confirmStageCard: (readings?: Partial<SessionMeasurements>) => void;
   dismissDueNotice: () => void;
-  clearStageCardRequest: () => void;
 }
 
 // How long Snooze holds back an addition or task alert before it fires again
@@ -234,7 +233,6 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       flowMode: 'full',
       announcedDueIds: [],
       activeDueNotice: null,
-      stageCardRequested: false,
 
       loadRecipe: (recipe: BrewfatherRecipe) => {
         notificationManager.clearLiveTimerNotification();
@@ -270,9 +268,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           dismissedTaskAlertIds: [],
           alertSnoozedUntil: {},
           announcedDueIds: [],
-          activeDueNotice: null,
-          // By stage opens the first stage's card straight away
-          stageCardRequested: get().flowMode === 'byStage'
+          activeDueNotice: null
         });
       },
 
@@ -312,8 +308,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           dismissedTaskAlertIds: [],
           alertSnoozedUntil: {},
           announcedDueIds: [],
-          activeDueNotice: null,
-          stageCardRequested: false
+          activeDueNotice: null
         });
       },
 
@@ -917,9 +912,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           dismissedTaskAlertIds: [],
           alertSnoozedUntil: {},
           announcedDueIds: [],
-          activeDueNotice: null,
-          // By stage: arriving at a stage opens its card while it has anything to confirm
-          stageCardRequested: state.flowMode === 'byStage' && hasStageCardItems(updatedStages[newIndex])
+          activeDueNotice: null
         });
 
         get().addAuditLog(
@@ -1321,8 +1314,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           announcedDueIds: pastDueIds,
           activeDueNotice: null,
           activeAlertAdditions: [],
-          activeTaskAlert: null,
-          stageCardRequested: isByStage && state.finishedAt === null && hasStageCardItems(stage)
+          activeTaskAlert: null
         });
 
         if (stage) {
@@ -1370,8 +1362,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         set({
           stages: updatedStages,
           activeAlertAdditions: [],
-          activeTaskAlert: null,
-          stageCardRequested: false
+          activeTaskAlert: null
         });
 
         if (additionIds.length > 0) {
@@ -1396,12 +1387,6 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       dismissDueNotice: () => {
         if (get().activeDueNotice) {
           set({ activeDueNotice: null });
-        }
-      },
-
-      clearStageCardRequest: () => {
-        if (get().stageCardRequested) {
-          set({ stageCardRequested: false });
         }
       }
     }),
