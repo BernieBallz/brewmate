@@ -52,6 +52,16 @@ export const getMeasurementStepper = (
   }
 };
 
+// Short names for the By stage "Record ..." button when a reading comes due mid-stage
+const READING_SHORT_NAMES: Record<string, string> = {
+  'ph-sample': 'pH',
+  'preboil-sg': 'pre-boil SG',
+  'postboil-sg': 'OG'
+};
+
+export const getReadingShortName = (checklistId: string, fallback: string): string =>
+  READING_SHORT_NAMES[checklistId] ?? fallback;
+
 // One stepper press: start from the recorded value (or the default) and round away float noise
 export const stepMeasurementValue = (currentVal: number | undefined, delta: number, defaultVal: number): number => {
   const val = currentVal !== undefined ? currentVal : defaultVal;

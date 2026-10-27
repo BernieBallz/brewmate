@@ -52,6 +52,9 @@ export const StageActions: React.FC<StageActionsProps> = ({
     ? () => (onOpenDoneCard && getPendingEndReadings(currentStage).length > 0 ? onOpenDoneCard() : nextStage())
     : guardAdvance(nextStage);
 
+  // By stage: a checklist stage whose card was dismissed reopens it rather than finishing ("DONE" would be misleading)
+  const confirmLabel = isByStage && onOpenStageCard && hasStageCardItems(currentStage) ? 'REVIEW & CONFIRM' : flow.startLabel;
+
   const isLarge = size === 'large';
   const primarySize = isLarge
     ? 'min-h-[64px] sm:min-h-[72px] py-3 text-base sm:text-lg'
@@ -81,7 +84,7 @@ export const StageActions: React.FC<StageActionsProps> = ({
           className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-widest uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]`}
         >
           <CheckCircle2 className="w-5 h-5 text-emerald-400 stroke-[2.5]" />
-          <span>{flow.startLabel}</span>
+          <span>{confirmLabel}</span>
         </button>
       ) : flow.kind === 'countdown' ? (
         /* Case 2: Countdown Stages */

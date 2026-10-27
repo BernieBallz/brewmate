@@ -109,6 +109,10 @@ export const DONE_CARD_READING_IDS = ['ph-sample', 'preboil-sg', 'postboil-sg'];
 export const getPendingEndReadings = (stage: BrewStage | undefined): ChecklistItem[] =>
   stage?.checklist?.filter(c => !c.checked && DONE_CARD_READING_IDS.includes(c.id)) ?? [];
 
+// Done card readings whose timed prompt has fired during the stage (mash pH); By stage offers to record them right away
+export const getDueReadings = (stage: BrewStage | undefined, announcedDueIds: string[]): ChecklistItem[] =>
+  getPendingEndReadings(stage).filter(c => c.triggerRemainingSec !== undefined && announcedDueIds.includes(c.id));
+
 // Unticked reminders the By stage start card confirms (everything except the Done card readings)
 export const getStageCardReminders = (stage: BrewStage | undefined): ChecklistItem[] =>
   getUncheckedReminders(stage).filter(c => !DONE_CARD_READING_IDS.includes(c.id));
@@ -267,7 +271,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           alertSnoozedUntil: {},
           announcedDueIds: [],
           activeDueNotice: null,
-          stageCardRequested: false
+          // By stage opens the first stage's card straight away
+          stageCardRequested: get().flowMode === 'byStage'
         });
       },
 
@@ -760,7 +765,9 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
                 body: `${currentStage.title} (${Math.max(0, Math.ceil(remaining / 60))}m remaining)`,
                 tag: 'due-' + noticeId
               });
-              activeDueNotice = { id: noticeId, title: currentStage.title, lines };
+              // Readings that come due (mash pH) get a Record button on the banner
+              const readingIds = newTasks.filter(c => DONE_CARD_READING_IDS.includes(c.id)).map(c => c.id);
+              activeDueNotice = { id: noticeId, title: currentStage.title, lines, ...(readingIds.length > 0 ? { readingIds } : {}) };
               get().addAuditLog('NOTE', `Due: ${lines.join(', ')}`, { dueIds: noticeId.split('-'), remainingSec: Math.max(0, remaining) });
             }
           }
@@ -911,7 +918,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           alertSnoozedUntil: {},
           announcedDueIds: [],
           activeDueNotice: null,
-          stageCardRequested: false
+          // By stage: arriving at a stage opens its card while it has anything to confirm
+          stageCardRequested: state.flowMode === 'byStage' && hasStageCardItems(updatedStages[newIndex])
         });
 
         get().addAuditLog(

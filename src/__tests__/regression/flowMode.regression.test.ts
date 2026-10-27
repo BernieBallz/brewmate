@@ -4,6 +4,7 @@ import type { BrewfatherRecipe } from '../../types/brewfather';
 import {
   useBrewStore,
   getPendingEndReadings,
+  getDueReadings,
   hasStageCardItems,
   DONE_CARD_READING_IDS
 } from '../../store/brewStore';
@@ -231,6 +232,72 @@ describe('Brew flow mode (Full step / By stage) regression tests', () => {
       const markdown = generateMarkdownReport(options);
       expect(markdown).toContain('**Brew Flow**: By stage');
       expect(markdown).toContain('(at stage start)');
+    });
+  });
+
+  describe('arriving at a stage', () => {
+    it('requests the next stage card on arrival in By stage', () => {
+      state().setFlowMode('byStage');
+      state().confirmStageCard();
+      expect(state().stageCardRequested).toBe(false);
+
+      state().nextStage(); // Boil -> Chill, which has reminders to confirm
+      expect(state().stageCardRequested).toBe(true);
+    });
+
+    it('does not request a card in Full step', () => {
+      state().nextStage();
+      expect(state().stageCardRequested).toBe(false);
+    });
+
+    it('does not request a card for a stage with nothing left to confirm', () => {
+      state().setFlowMode('byStage');
+      state().goToStage(BOIL_INDEX + 1);
+      state().confirmStageCard();
+      state().goToStage(BOIL_INDEX); // back to Boil...
+      state().confirmStageCard();
+      state().goToStage(BOIL_INDEX + 1); // ...and into the already-confirmed Chill
+      expect(state().stageCardRequested).toBe(false);
+    });
+
+    it('opens the first stage card when a recipe loads in By stage only', () => {
+      state().loadRecipe(testRecipe as unknown as BrewfatherRecipe);
+      expect(state().stageCardRequested).toBe(false);
+
+      state().setFlowMode('byStage');
+      state().loadRecipe(testRecipe as unknown as BrewfatherRecipe);
+      expect(state().stageCardRequested).toBe(true);
+    });
+  });
+
+  describe('readings due mid-stage', () => {
+    it('offers to record the mash pH when its prompt fires, until it is recorded', () => {
+      vi.spyOn(notificationManager, 'sendNotification').mockResolvedValue({ sent: true });
+      state().goToStage(MASH_REST_INDEX);
+      state().setFlowMode('byStage');
+      state().confirmStageCard();
+      const mash = state().stages[MASH_REST_INDEX];
+      const ph = mash.checklist.find(c => c.id === 'ph-sample')!;
+      const start = Date.now();
+      useBrewStore.setState({
+        timerStatus: 'running',
+        timerStartedAtWallClock: start,
+        timerAccumulatedElapsedSec: 0,
+        timerTotalSec: mash.plannedDurationSec,
+        timerRemainingSec: mash.plannedDurationSec
+      });
+
+      expect(getDueReadings(state().stages[MASH_REST_INDEX], state().announcedDueIds)).toEqual([]);
+
+      vi.setSystemTime(start + (mash.plannedDurationSec - ph.triggerRemainingSec!) * 1000);
+      state().tick();
+      expect(state().activeDueNotice?.readingIds).toEqual(['ph-sample']);
+      expect(getDueReadings(state().stages[MASH_REST_INDEX], state().announcedDueIds).map(c => c.id)).toEqual(['ph-sample']);
+
+      state().setMeasurement('mashPhActual', 5.3);
+      const after = state().stages[MASH_REST_INDEX];
+      expect(getDueReadings(after, state().announcedDueIds)).toEqual([]);
+      expect(getPendingEndReadings(after)).toEqual([]);
     });
   });
 

@@ -1,23 +1,29 @@
 import React, { useState } from 'react';
-import { useBrewStore, getPendingEndReadings } from '../store/brewStore';
+import { useBrewStore, getPendingEndReadings, getDueReadings } from '../store/brewStore';
 import type { SessionMeasurements } from '../types/session';
 import { getMeasurementStepper } from '../utils/measurementSteppers';
 import { getStageFlow } from '../hooks/useStageTimerView';
 import { MeasurementStepper } from './MeasurementStepper';
-import { ArrowRight, Gauge } from 'lucide-react';
+import { ArrowRight, Gauge, Check } from 'lucide-react';
+
+export type ReadingCardMode = 'finish' | 'record';
 
 interface DoneCardProps {
+  // 'finish': all outstanding readings, then move on to the next stage.
+  // 'record': only readings that have just come due (mash pH mid-rest); saves and stays on the stage.
+  mode?: ReadingCardMode;
   onClose: () => void;
 }
 
-// By stage Done card: readings taken during or at the end of the stage (mash pH, pre-boil SG, OG), then move on
-export const DoneCard: React.FC<DoneCardProps> = ({ onClose }) => {
+// By stage reading card: readings taken during or at the end of the stage (mash pH, pre-boil SG, OG)
+export const DoneCard: React.FC<DoneCardProps> = ({ mode = 'finish', onClose }) => {
   const stages = useBrewStore(state => state.stages);
   const currentStageIndex = useBrewStore(state => state.currentStageIndex);
   const recipe = useBrewStore(state => state.recipe);
   const setMeasurement = useBrewStore(state => state.setMeasurement);
   const nextStage = useBrewStore(state => state.nextStage);
   const confirmFlowStage = useBrewStore(state => state.confirmFlowStage);
+  const announcedDueIds = useBrewStore(state => state.announcedDueIds);
 
   const [readings, setReadings] = useState<Partial<SessionMeasurements>>({});
 
@@ -25,7 +31,8 @@ export const DoneCard: React.FC<DoneCardProps> = ({ onClose }) => {
   if (!stage) return null;
 
   const flow = getStageFlow(stage);
-  const pending = getPendingEndReadings(stage)
+  const isRecord = mode === 'record';
+  const pending = (isRecord ? getDueReadings(stage, announcedDueIds) : getPendingEndReadings(stage))
     .map(item => ({ item, stepper: getMeasurementStepper(item.id, stage, recipe) }))
     .filter((entry): entry is { item: typeof entry.item; stepper: NonNullable<typeof entry.stepper> } => entry.stepper !== null);
 
@@ -44,7 +51,11 @@ export const DoneCard: React.FC<DoneCardProps> = ({ onClose }) => {
         setMeasurement(key as keyof SessionMeasurements, value);
       }
     }
-    advance();
+    if (isRecord) {
+      onClose();
+    } else {
+      advance();
+    }
   };
 
   const hasReadings = Object.keys(readings).length > 0;
@@ -59,13 +70,15 @@ export const DoneCard: React.FC<DoneCardProps> = ({ onClose }) => {
       >
         <div className="shrink-0 px-4 pt-4 pb-3 border-b border-slate-800">
           <span className="text-[11px] font-mono font-bold text-amber-400 uppercase tracking-wider">
-            Finishing {stage.title}
+            {isRecord ? `${stage.title} · due now` : `Finishing ${stage.title}`}
           </span>
           <h3 id="done-card-title" className="flex items-center space-x-2 text-lg font-black text-white leading-tight mt-0.5">
             <Gauge className="w-5 h-5 text-purple-400 shrink-0" />
-            <span>Record readings</span>
+            <span>{isRecord ? 'Record reading' : 'Record readings'}</span>
           </h3>
-          <p className="text-xs text-gray-400 mt-1">Leave a reading empty to skip it.</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {isRecord ? 'The timer keeps running.' : 'Leave a reading empty to skip it.'}
+          </p>
         </div>
 
         <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-1.5">
@@ -100,8 +113,17 @@ export const DoneCard: React.FC<DoneCardProps> = ({ onClose }) => {
             onClick={handleSave}
             className="flex-1 min-h-[52px] rounded-xl font-mono font-black text-sm tracking-widest uppercase touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
           >
-            <span>{hasReadings ? 'Save & next' : 'Skip & next'}</span>
-            <ArrowRight className="w-5 h-5 text-emerald-400" />
+            {isRecord ? (
+              <>
+                <Check className="w-5 h-5 text-emerald-400" />
+                <span>Save</span>
+              </>
+            ) : (
+              <>
+                <span>{hasReadings ? 'Save & next' : 'Skip & next'}</span>
+                <ArrowRight className="w-5 h-5 text-emerald-400" />
+              </>
+            )}
           </button>
         </div>
       </div>

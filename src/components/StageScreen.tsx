@@ -1,11 +1,12 @@
 import React from 'react';
-import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS } from '../store/brewStore';
+import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS, DONE_CARD_READING_IDS, getDueReadings } from '../store/brewStore';
 import { useStageTimerView, formatTime, formatWaitCountdown } from '../hooks/useStageTimerView';
 import { getAdditionBadge } from '../utils/additionDisplay';
+import { getReadingShortName } from '../utils/measurementSteppers';
 import { CountdownProgressBar } from './CountdownProgressBar';
 import { StageActions } from './StageActions';
 import { StrikeOffsetControl } from './StrikeOffsetControl';
-import { Menu, Thermometer, Droplets, CheckCircle2, Check } from 'lucide-react';
+import { Menu, Thermometer, Droplets, CheckCircle2, Check, Gauge } from 'lucide-react';
 
 interface StageScreenProps {
   onOpenMenu: () => void;
@@ -13,6 +14,7 @@ interface StageScreenProps {
   onOpenReportModal: () => void;
   onOpenStageCard: () => void;
   onOpenDoneCard: () => void;
+  onRecordReading: () => void;
 }
 
 interface PlanItem {
@@ -32,9 +34,11 @@ export const StageScreen: React.FC<StageScreenProps> = ({
   onConfirmAdvance,
   onOpenReportModal,
   onOpenStageCard,
-  onOpenDoneCard
+  onOpenDoneCard,
+  onRecordReading
 }) => {
   const recipe = useBrewStore(state => state.recipe);
+  const announcedDueIds = useBrewStore(state => state.announcedDueIds);
   const {
     stages,
     currentStageIndex,
@@ -78,7 +82,8 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             sec: c.triggerRemainingSec!,
             when: timedWhen(c.triggerRemainingSec!),
             text: c.label,
-            done: isTimedItemDone(c.id, c.checked)
+            // A reading prompt (mash pH) stays open until the reading is recorded or skipped
+            done: DONE_CARD_READING_IDS.includes(c.id) ? c.checked : isTimedItemDone(c.id, c.checked)
           }))
       ].sort((a, b) => b.sec - a.sec)
     : [
@@ -94,6 +99,9 @@ export const StageScreen: React.FC<StageScreenProps> = ({
       ];
 
   const stopwatchStr = formatTime(timerRemainingSec);
+
+  // A reading whose prompt has fired (mash pH) can be recorded straight away rather than at the end of the stage
+  const dueReadings = getDueReadings(currentStage, announcedDueIds);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pt-2 pb-3 overflow-hidden select-none">
@@ -234,6 +242,16 @@ export const StageScreen: React.FC<StageScreenProps> = ({
 
       {/* Actions */}
       <div className="shrink-0 space-y-1.5">
+        {!isSessionDone && dueReadings.length > 0 && (
+          <button
+            type="button"
+            onClick={onRecordReading}
+            className="w-full min-h-[48px] rounded-xl font-mono font-black text-sm tracking-wider uppercase touch-press flex items-center justify-center space-x-2 border bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 border-purple-500/60"
+          >
+            <Gauge className="w-5 h-5 text-purple-300" />
+            <span>Record {dueReadings.map(c => getReadingShortName(c.id, c.label)).join(' & ')}</span>
+          </button>
+        )}
         <StageActions
           size="large"
           onConfirmAdvance={onConfirmAdvance}

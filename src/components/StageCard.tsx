@@ -41,7 +41,11 @@ export const StageCard: React.FC<StageCardProps> = ({ onClose }) => {
 
   // Opened before the stage starts it confirms and starts; opened mid-stage (after switching mode) it only confirms
   const isBeforeStart = timerStatus === 'idle' && stage.flowPhase !== 'finished';
-  const primaryLabel = !isBeforeStart ? 'Confirm' : flow.kind === 'confirm' ? 'Confirm & done' : 'Confirm & start';
+  const primaryLabel = !isBeforeStart
+    ? 'Confirm'
+    : flow.kind === 'confirm'
+    ? (stage.id === 'CLEANUP' ? 'Confirm & finish' : 'Confirm & done')
+    : 'Confirm & start';
   const PrimaryIcon = isBeforeStart && flow.kind !== 'confirm' ? Play : CheckCircle2;
 
   const timingLabel = flow.kind === 'countdown'
@@ -55,7 +59,9 @@ export const StageCard: React.FC<StageCardProps> = ({ onClose }) => {
     return addition.triggerRemainingSec >= stage.plannedDurationSec ? 'at start' : `@ ${addition.triggerTimeMin}m left`;
   };
 
+  // Close first: finishing a checklist stage moves on, and arriving at the next stage requests its card
   const handleConfirm = () => {
+    onClose();
     confirmStageCard(readings);
     if (isBeforeStart) {
       if (flow.kind === 'confirm') {
@@ -64,7 +70,6 @@ export const StageCard: React.FC<StageCardProps> = ({ onClose }) => {
         startTimer();
       }
     }
-    onClose();
   };
 
   return (

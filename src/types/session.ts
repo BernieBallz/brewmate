@@ -48,6 +48,8 @@ export interface DueNotice {
   id: string;
   title: string;
   lines: string[];
+  // Readings among the due items, offered a Record button
+  readingIds?: string[];
 }
 
 export interface ChecklistItem {

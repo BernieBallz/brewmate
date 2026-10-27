@@ -14,7 +14,7 @@ import { NotificationSetupModal } from './components/NotificationSetupModal';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { StageScreen } from './components/StageScreen';
 import { StageCard } from './components/StageCard';
-import { DoneCard } from './components/DoneCard';
+import { DoneCard, type ReadingCardMode } from './components/DoneCard';
 import { DueBanner } from './components/DueBanner';
 import { SessionLogSheet } from './components/SessionLogSheet';
 import { notificationManager } from './utils/notificationManager';
@@ -39,7 +39,7 @@ export function App() {
 
   // By stage cards and the menu's Session Log sheet
   const [isStageCardOpen, setIsStageCardOpen] = useState(false);
-  const [isDoneCardOpen, setIsDoneCardOpen] = useState(false);
+  const [doneCardMode, setDoneCardMode] = useState<ReadingCardMode | null>(null);
   const [isSessionLogOpen, setIsSessionLogOpen] = useState(false);
   // Switching to By stage mid-stage with items still to confirm opens the stage card straight away
   const showStageCard = isStageCardOpen || stageCardRequested;
@@ -99,7 +99,7 @@ export function App() {
 
   // Lock-screen "Next Stage" in By stage with a reading still to record opens the Done card
   useEffect(() => {
-    const openDoneCard = () => setIsDoneCardOpen(true);
+    const openDoneCard = () => setDoneCardMode('finish');
     window.addEventListener(DONE_CARD_EVENT, openDoneCard);
     return () => window.removeEventListener(DONE_CARD_EVENT, openDoneCard);
   }, []);
@@ -181,7 +181,8 @@ export function App() {
             onConfirmAdvance={() => openAdvanceModal()}
             onOpenReportModal={() => setIsReportModalOpen(true)}
             onOpenStageCard={() => setIsStageCardOpen(true)}
-            onOpenDoneCard={() => setIsDoneCardOpen(true)}
+            onOpenDoneCard={() => setDoneCardMode('finish')}
+            onRecordReading={() => setDoneCardMode('record')}
           />
         ) : isLandscape ? (
           <LandscapeHUD
@@ -199,9 +200,10 @@ export function App() {
       {/* Overlays & Modals */}
       <AdditionModal />
       <TaskAlertModal />
-      <DueBanner />
-      {showStageCard && <StageCard onClose={closeStageCard} />}
-      {isDoneCardOpen && <DoneCard onClose={() => setIsDoneCardOpen(false)} />}
+      <DueBanner onRecord={() => setDoneCardMode('record')} />
+      {/* Keyed by stage so each stage's card starts with fresh readings */}
+      {showStageCard && <StageCard key={currentStageIndex} onClose={closeStageCard} />}
+      {doneCardMode && <DoneCard mode={doneCardMode} onClose={() => setDoneCardMode(null)} />}
       <SessionLogSheet isOpen={isSessionLogOpen} onClose={() => setIsSessionLogOpen(false)} />
 
       <MenuDrawer
