@@ -14,7 +14,8 @@ export const CountdownProgressBar: React.FC<CountdownProgressBarProps> = ({ size
     isCountdownDone,
     timerStatus,
     activeRemainingSec,
-    nextTimedEvent
+    nextTimedEvent,
+    isTimedItemDone
   } = useStageTimerView();
 
   const isLarge = size === 'large';
@@ -33,8 +34,8 @@ export const CountdownProgressBar: React.FC<CountdownProgressBarProps> = ({ size
       />
       {/* Plot Milestone Markers for Timed Reminders & Additions (Grouped by time to avoid shadow compounding) */}
       {milestoneGroups.map(group => {
-        const allAdditionsConfirmed = group.additions.length === 0 || group.additions.every(a => a.confirmed);
-        const allChecklistChecked = group.checklist.length === 0 || group.checklist.every(c => c.checked);
+        const allAdditionsConfirmed = group.additions.length === 0 || group.additions.every(a => isTimedItemDone(a.id, a.confirmed));
+        const allChecklistChecked = group.checklist.length === 0 || group.checklist.every(c => isTimedItemDone(c.id, c.checked));
         const allCompleted = allAdditionsConfirmed && allChecklistChecked;
 
         const isDueNow = !allCompleted && activeRemainingSec <= group.triggerRemainingSec && timerStatus !== 'idle';

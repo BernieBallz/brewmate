@@ -69,6 +69,8 @@ export const useStageTimerView = () => {
   const timerRemainingSec = useBrewStore(state => state.timerRemainingSec);
   const timerTotalSec = useBrewStore(state => state.timerTotalSec);
   const finishedAt = useBrewStore(state => state.finishedAt);
+  const flowMode = useBrewStore(state => state.flowMode);
+  const announcedDueIds = useBrewStore(state => state.announcedDueIds);
 
   const currentStage = stages[currentStageIndex];
   const flow = getStageFlow(currentStage);
@@ -76,6 +78,10 @@ export const useStageTimerView = () => {
   const flowPhase = currentStage?.flowPhase || (timerStatus === 'running' ? 'running' : timerStatus === 'paused' ? 'paused' : 'ready');
   const isSessionDone = finishedAt !== null || (currentStage?.id === 'CLEANUP' && currentStage?.status === 'completed');
   const isCountdownDone = flow.kind === 'countdown' && (flowPhase === 'finished' || timerRemainingSec <= 0);
+
+  // By stage confirms items upfront, so a timed item counts as done once its due banner has fired
+  const isTimedItemDone = (id: string, confirmedOrChecked: boolean) =>
+    flowMode === 'byStage' ? announcedDueIds.includes(id) || flowPhase === 'finished' : confirmedOrChecked;
 
   const activeRemainingSec = timerStatus === 'idle' && flowPhase !== 'finished' ? timerTotalSec : timerRemainingSec;
   const displayTimeStr = formatTime(activeRemainingSec);
@@ -113,18 +119,18 @@ export const useStageTimerView = () => {
 
   if (flow.kind === 'countdown' && currentStage) {
     for (const add of currentStage.additions || []) {
-      if (!add.confirmed && isUpcoming(add.triggerRemainingSec)) {
+      if (!isTimedItemDone(add.id, add.confirmed) && isUpcoming(add.triggerRemainingSec)) {
         upcomingTimedEvents.push({
           id: add.id,
           kind: 'addition',
-          label: `${add.amount}${add.unit || 'g'} ${add.name}`,
+          label: `${add.amount} ${add.unit || 'g'} ${add.name}`,
           triggerRemainingSec: add.triggerRemainingSec,
           waitSec: activeRemainingSec - add.triggerRemainingSec
         });
       }
     }
     for (const item of currentStage.checklist || []) {
-      if (!item.checked && item.triggerRemainingSec !== undefined && isUpcoming(item.triggerRemainingSec)) {
+      if (!isTimedItemDone(item.id, item.checked) && item.triggerRemainingSec !== undefined && isUpcoming(item.triggerRemainingSec)) {
         upcomingTimedEvents.push({
           id: item.id,
           kind: 'reminder',
@@ -186,6 +192,7 @@ export const useStageTimerView = () => {
     countdownProgressPct,
     immediateUncheckedReminder,
     nextTimedEvent,
-    milestoneGroups
+    milestoneGroups,
+    isTimedItemDone
   };
 };

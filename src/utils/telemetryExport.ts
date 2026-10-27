@@ -1,5 +1,5 @@
 import type { BrewfatherRecipe } from '../types/brewfather';
-import type { BrewStage, SessionAuditLogItem, SessionMeasurements } from '../types/session';
+import type { BrewStage, FlowMode, SessionAuditLogItem, SessionMeasurements } from '../types/session';
 
 export interface TelemetryExportOptions {
   recipe: BrewfatherRecipe | null;
@@ -10,7 +10,10 @@ export interface TelemetryExportOptions {
   sessionEndTime: number | null;
   finishedAt: number | null;
   strikeOffset: number;
+  flowMode?: FlowMode;
 }
+
+const FLOW_MODE_LABELS: Record<FlowMode, string> = { full: 'Full step', byStage: 'By stage' };
 
 export const formatDurationOnly = (totalSec: number): string => {
   const safeSec = Math.max(0, Math.round(totalSec));
@@ -46,7 +49,8 @@ export const generateTelemetryData = (options: TelemetryExportOptions) => {
     sessionStartTime,
     sessionEndTime,
     finishedAt,
-    strikeOffset
+    strikeOffset,
+    flowMode = 'full'
   } = options;
 
   const isComplete = finishedAt !== null || (stages.length > 0 && stages[stages.length - 1].status === 'completed');
@@ -81,7 +85,8 @@ export const generateTelemetryData = (options: TelemetryExportOptions) => {
       unit: a.unit || 'g',
       triggerTimeMin: a.triggerTimeMin,
       confirmed: Boolean(a.confirmed),
-      confirmedAt: a.confirmedAt || null
+      confirmedAt: a.confirmedAt || null,
+      confirmedVia: a.confirmedVia ?? null
     }))
   );
 
@@ -101,6 +106,7 @@ export const generateTelemetryData = (options: TelemetryExportOptions) => {
       targetAbv: recipe?.abv ?? null,
       preBoilGravityTarget: recipe?.preBoilGravity ?? null,
       strikeOffsetC: strikeOffset,
+      flowMode,
       brewSessionDate,
       brewSessionDateFormatted,
       sessionStartTime: sessionStartTime ? new Date(sessionStartTime).toISOString() : null,
@@ -165,7 +171,8 @@ export const generateTelemetryData = (options: TelemetryExportOptions) => {
         unit: a.unit || 'g',
         triggerTimeMin: a.triggerTimeMin,
         confirmed: Boolean(a.confirmed),
-        confirmedAt: a.confirmedAt || null
+        confirmedAt: a.confirmedAt || null,
+        confirmedVia: a.confirmedVia ?? null
       }))
     })),
     additionsLog: allAdditions,
@@ -335,7 +342,7 @@ export const generateCsvReport = (options: TelemetryExportOptions): string => {
 };
 
 export const generateMarkdownReport = (options: TelemetryExportOptions): string => {
-  const { recipe, stages, measurements, auditLogs, sessionStartTime, sessionEndTime, finishedAt } = options;
+  const { recipe, stages, measurements, auditLogs, sessionStartTime, sessionEndTime, finishedAt, flowMode = 'full' } = options;
   const isComplete = finishedAt !== null || (stages.length > 0 && stages[stages.length - 1].status === 'completed');
 
   const sumStageDurationSec = stages.reduce((acc, s) => acc + (s.actualDurationSec || 0), 0);
@@ -365,6 +372,7 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
   lines.push(`**Brewer**: ${recipe?.author || 'Lead Brewer'}`);
   lines.push(`**Style**: ${recipe?.type || 'All Grain'} | **Target OG**: ${recipe?.og || 'N/A'}`);
   lines.push(`**Status**: ${isComplete ? 'COMPLETED' : 'IN PROGRESS'}`);
+  lines.push(`**Brew Flow**: ${FLOW_MODE_LABELS[flowMode]}`);
   lines.push('');
   lines.push('---');
   lines.push('## 1. TIMING & STAGE VARIANCE AUDIT');
@@ -455,7 +463,10 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
     lines.push('| :--- | :--- | :--- | :--- | :--- | :--- |');
     allAdditions.forEach((a) => {
       const timeTarget = a.triggerTimeMin === 0 ? 'Flameout' : `T-${a.triggerTimeMin}m`;
-      const timeLog = a.confirmedAt ? new Date(a.confirmedAt).toLocaleTimeString() : 'Pending';
+      // By stage confirms additions upfront, so the time is when the stage started, not when it went in
+      const timeLog = a.confirmedAt
+        ? `${new Date(a.confirmedAt).toLocaleTimeString()}${a.confirmedVia === 'stage-card' ? ' (at stage start)' : ''}`
+        : 'Pending';
       lines.push(
         `| ${a.name} | ${a.type} | ${timeTarget} | ${a.amount} ${a.unit || 'g'} | ${
           a.confirmed ? '✅ YES' : '❌ NO'

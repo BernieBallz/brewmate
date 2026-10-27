@@ -16,6 +16,10 @@ export type StageStatus = 'pending' | 'active' | 'completed' | 'skipped';
 
 export type TimerType = 'countdown' | 'stopwatch' | 'manual';
 
+// 'full': tick each reminder and confirm each addition as you go.
+// 'byStage': confirm a stage's reminders and additions in one go when it starts; due items show a banner.
+export type FlowMode = 'full' | 'byStage';
+
 export interface StageAddition {
   id: string;
   name: string;
@@ -25,6 +29,7 @@ export interface StageAddition {
   triggerRemainingSec: number; // calculated seconds remaining at which alert fires
   confirmed: boolean;
   confirmedAt?: number; // timestamp
+  confirmedVia?: 'stage-card'; // confirmed upfront on the By stage card rather than when added
   type: 'hop' | 'misc' | 'sugar' | 'water' | 'enzyme' | 'other';
   notes?: string;
 }
@@ -36,6 +41,13 @@ export interface TaskAlertPrompt {
   message: string;
   actionLabel?: string;
   remainingMin?: number;
+}
+
+// In-app banner for timed items coming due in By stage mode (no confirmation needed)
+export interface DueNotice {
+  id: string;
+  title: string;
+  lines: string[];
 }
 
 export interface ChecklistItem {
@@ -156,4 +168,12 @@ export interface BrewSessionState {
   dismissedTaskAlertIds: string[];
   // Snoozed addition / task alert ids -> wall-clock time (ms) when they may alert again
   alertSnoozedUntil: Record<string, number>;
+
+  // Brew flow preference (kept across sessions) and By stage state
+  flowMode: FlowMode;
+  // Timed items in the current stage already announced by the By stage due banner
+  announcedDueIds: string[];
+  activeDueNotice: DueNotice | null;
+  // Set when switching to By stage mid-stage with items still to confirm; the UI opens the stage card
+  stageCardRequested: boolean;
 }

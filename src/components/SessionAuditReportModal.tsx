@@ -38,7 +38,8 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
     sessionStartTime, 
     sessionEndTime, 
     finishedAt,
-    strikeOffset 
+    strikeOffset,
+    flowMode
   } = useBrewStore();
 
   const [activeTab, setActiveTab] = useState<'summary' | 'json'>('summary');
@@ -54,7 +55,8 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
     sessionStartTime,
     sessionEndTime,
     finishedAt,
-    strikeOffset
+    strikeOffset,
+    flowMode
   };
 
   const dateStr = sessionStartTime ? new Date(sessionStartTime).toLocaleDateString() : 'Today';

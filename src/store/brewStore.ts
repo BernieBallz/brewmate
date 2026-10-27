@@ -8,7 +8,9 @@ import type {
   SessionMeasurements,
   TaskAlertPrompt,
   BrewStage,
-  ChecklistItem
+  ChecklistItem,
+  FlowMode,
+  DueNotice
 } from '../types/session';
 import { parseBrewfatherRecipe, buildSpargeAdditions } from '../utils/brewfatherParser';
 import { audioAlarm } from '../utils/audioAlarm';
@@ -61,6 +63,12 @@ interface BrewStoreActions {
   toggleWakeLock: () => Promise<void>;
   toggleAudio: () => void;
   toggleVibration: () => void;
+
+  // Brew flow (Full step / By stage)
+  setFlowMode: (mode: FlowMode) => void;
+  confirmStageCard: (readings?: Partial<SessionMeasurements>) => void;
+  dismissDueNotice: () => void;
+  clearStageCardRequest: () => void;
 }
 
 // How long Snooze holds back an addition or task alert before it fires again
@@ -90,6 +98,31 @@ export const getUncheckedReminders = (stage: BrewStage | undefined): ChecklistIt
 export const hasIncompleteStageItems = (stage: BrewStage | undefined): boolean =>
   getUnconfirmedAdditions(stage).length > 0 || getUncheckedReminders(stage).length > 0;
 
+// Fired when something outside the UI (the lock-screen Next Stage button) needs the By stage Done card
+export const DONE_CARD_EVENT = 'brewmate:done-card';
+
+// Readings taken during or at the end of a stage (mash pH mid-rest, pre-boil SG after sparge, OG at knockout).
+// By stage collects these on the Done card; the start card only takes readings made as the stage begins.
+export const DONE_CARD_READING_IDS = ['ph-sample', 'preboil-sg', 'postboil-sg'];
+
+// Unrecorded Done card readings; By stage shows the Done card for these before moving on
+export const getPendingEndReadings = (stage: BrewStage | undefined): ChecklistItem[] =>
+  stage?.checklist?.filter(c => !c.checked && DONE_CARD_READING_IDS.includes(c.id)) ?? [];
+
+// Unticked reminders the By stage start card confirms (everything except the Done card readings)
+export const getStageCardReminders = (stage: BrewStage | undefined): ChecklistItem[] =>
+  getUncheckedReminders(stage).filter(c => !DONE_CARD_READING_IDS.includes(c.id));
+
+// True when the By stage start card has anything left to confirm for this stage
+export const hasStageCardItems = (stage: BrewStage | undefined): boolean =>
+  getUnconfirmedAdditions(stage).length > 0 || getStageCardReminders(stage).length > 0;
+
+// Timed items (additions and timed reminders) whose trigger has been reached at this remaining time
+const getTimedItemsDue = (stage: BrewStage, remainingSec: number) => ({
+  additions: (stage.additions || []).filter(a => remainingSec <= a.triggerRemainingSec),
+  checklist: (stage.checklist || []).filter(c => c.triggerRemainingSec !== undefined && remainingSec <= c.triggerRemainingSec)
+});
+
 const initialStrikeOffset = 10;
 
 function formatTimerDisplay(seconds: number): string {
@@ -101,16 +134,20 @@ function formatTimerDisplay(seconds: number): string {
   return isNegative ? `+${formatted} over` : formatted;
 }
 
-function getNextMilestoneSummary(stage: BrewStage | undefined, remainingSec: number): string {
+// announcedDueIds is passed in By stage, where items are confirmed upfront: an item is pending until its banner has fired
+function getNextMilestoneSummary(stage: BrewStage | undefined, remainingSec: number, announcedDueIds?: string[]): string {
   if (!stage) return 'Brew Session Active';
 
+  const isPendingAddition = (a: StageAddition) => (announcedDueIds ? !announcedDueIds.includes(a.id) : !a.confirmed);
+  const isPendingTask = (c: ChecklistItem) => (announcedDueIds ? !announcedDueIds.includes(c.id) : !c.checked);
+
   if (stage.additions && stage.additions.length > 0) {
-    const dueNow = stage.additions.find(a => !a.confirmed && remainingSec <= a.triggerRemainingSec);
+    const dueNow = stage.additions.find(a => isPendingAddition(a) && remainingSec <= a.triggerRemainingSec);
     if (dueNow) {
       return `DUE NOW: ${dueNow.amount}${dueNow.unit || 'g'} ${dueNow.name}`;
     }
     const upcoming = stage.additions
-      .filter(a => !a.confirmed && a.triggerRemainingSec < remainingSec)
+      .filter(a => isPendingAddition(a) && a.triggerRemainingSec < remainingSec)
       .sort((a, b) => b.triggerRemainingSec - a.triggerRemainingSec)[0];
     if (upcoming) {
       const waitMin = Math.ceil((remainingSec - upcoming.triggerRemainingSec) / 60);
@@ -121,13 +158,13 @@ function getNextMilestoneSummary(stage: BrewStage | undefined, remainingSec: num
 
   if (stage.checklist && stage.checklist.length > 0) {
     const dueTask = stage.checklist.find(
-      c => !c.checked && c.triggerRemainingSec !== undefined && remainingSec <= c.triggerRemainingSec
+      c => isPendingTask(c) && c.triggerRemainingSec !== undefined && remainingSec <= c.triggerRemainingSec
     );
     if (dueTask) {
       return `DUE NOW: ${dueTask.label}`;
     }
     const upcomingTask = stage.checklist
-      .filter(c => !c.checked && c.triggerRemainingSec !== undefined && c.triggerRemainingSec < remainingSec)
+      .filter(c => isPendingTask(c) && c.triggerRemainingSec !== undefined && c.triggerRemainingSec < remainingSec)
       .sort((a, b) => (b.triggerRemainingSec || 0) - (a.triggerRemainingSec || 0))[0];
     if (upcomingTask) {
       const waitMin = Math.ceil((remainingSec - (upcomingTask.triggerRemainingSec || 0)) / 60);
@@ -137,6 +174,10 @@ function getNextMilestoneSummary(stage: BrewStage | undefined, remainingSec: num
 
   return 'Stage in progress';
 }
+
+// The ids that decide whether a timed item is still pending: announced banners in By stage, confirmations in Full step
+const announcedFor = (state: Pick<BrewSessionState, 'flowMode' | 'announcedDueIds'>): string[] | undefined =>
+  state.flowMode === 'byStage' ? state.announcedDueIds : undefined;
 
 function sameAdditionIds(a: StageAddition[], b: StageAddition[]): boolean {
   if (a.length !== b.length) return false;
@@ -186,6 +227,11 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       dismissedTaskAlertIds: [],
       alertSnoozedUntil: {},
 
+      flowMode: 'full',
+      announcedDueIds: [],
+      activeDueNotice: null,
+      stageCardRequested: false,
+
       loadRecipe: (recipe: BrewfatherRecipe) => {
         notificationManager.clearLiveTimerNotification();
 
@@ -218,7 +264,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           dismissedAdditionIds: [],
           activeTaskAlert: null,
           dismissedTaskAlertIds: [],
-          alertSnoozedUntil: {}
+          alertSnoozedUntil: {},
+          announcedDueIds: [],
+          activeDueNotice: null,
+          stageCardRequested: false
         });
       },
 
@@ -256,7 +305,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           dismissedAdditionIds: [],
           activeTaskAlert: null,
           dismissedTaskAlertIds: [],
-          alertSnoozedUntil: {}
+          alertSnoozedUntil: {},
+          announcedDueIds: [],
+          activeDueNotice: null,
+          stageCardRequested: false
         });
       },
 
@@ -288,7 +340,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         };
 
         const initialTimerSec = stage.timerType === 'countdown' ? stage.plannedDurationSec : 0;
-        const nextInfo = getNextMilestoneSummary(stage, initialTimerSec);
+        const nextInfo = getNextMilestoneSummary(stage, initialTimerSec, announcedFor(state));
         const timeDisplay = formatTimerDisplay(initialTimerSec);
         notificationManager.updateLiveTimerNotification(stage.title, timeDisplay, nextInfo, stage.timerType, 'running');
 
@@ -374,7 +426,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           flowPhase: 'running'
         };
 
-        const nextInfo = getNextMilestoneSummary(currentStage, state.timerRemainingSec);
+        const nextInfo = getNextMilestoneSummary(currentStage, state.timerRemainingSec, announcedFor(state));
         const timeDisplay = formatTimerDisplay(state.timerRemainingSec);
         notificationManager.updateLiveTimerNotification(currentStage.title, timeDisplay, nextInfo, currentStage.timerType, 'running');
 
@@ -544,7 +596,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           timerTotalSec: newTotal
         });
 
-        const nextInfo = getNextMilestoneSummary(currentStage, Math.max(0, newRemaining));
+        const nextInfo = getNextMilestoneSummary(currentStage, Math.max(0, newRemaining), announcedFor(state));
         const timeDisplay = formatTimerDisplay(newRemaining);
         const notifStatus = state.timerStatus === 'paused' ? 'paused' : 'running';
         notificationManager.updateLiveTimerNotification(
@@ -592,7 +644,9 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         const rawRemaining = state.timerTotalSec - totalElapsed;
         const remaining = rawRemaining;
         const timeDisplay = formatTimerDisplay(rawRemaining);
-        const nextInfo = getNextMilestoneSummary(currentStage, Math.max(0, rawRemaining));
+        const nextInfo = getNextMilestoneSummary(currentStage, Math.max(0, rawRemaining), announcedFor(state));
+        // By stage confirms everything upfront: due items get a short banner instead of the confirm modals
+        const isByStage = state.flowMode === 'byStage';
 
         if (rawRemaining !== state.timerRemainingSec) {
           notificationManager.updateLiveTimerNotification(currentStage.title, timeDisplay, nextInfo, 'countdown', 'running');
@@ -600,7 +654,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
         // Check for additions triggering in this stage
         const dueAdditions: StageAddition[] = [];
-        if (currentStage.additions && currentStage.additions.length > 0) {
+        if (!isByStage && currentStage.additions && currentStage.additions.length > 0) {
           for (const addition of currentStage.additions) {
             if (
               !addition.confirmed &&
@@ -639,7 +693,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
         // Check for timed checklist task alerts (e.g. Vorlauf reminder in Mash Rest)
         let triggeredTaskAlert: TaskAlertPrompt | null = null;
-        if (currentStage.checklist && currentStage.checklist.length > 0) {
+        if (!isByStage && currentStage.checklist && currentStage.checklist.length > 0) {
           for (const item of currentStage.checklist) {
             if (
               !item.checked &&
@@ -677,6 +731,41 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           });
         }
 
+        // By stage: announce newly due timed items once (sound, vibration, notification and banner).
+        // Items due at the very start were just confirmed on the stage card, so they are marked without a banner.
+        let announcedDueIds = state.announcedDueIds;
+        let activeDueNotice: DueNotice | null = state.activeDueNotice;
+        if (isByStage) {
+          const timedDue = getTimedItemsDue(currentStage, remaining);
+          const newAdditions = timedDue.additions.filter(a => !announcedDueIds.includes(a.id));
+          const newTasks = timedDue.checklist.filter(c => !announcedDueIds.includes(c.id));
+          if (newAdditions.length > 0 || newTasks.length > 0) {
+            announcedDueIds = [...announcedDueIds, ...newAdditions.map(a => a.id), ...newTasks.map(c => c.id)];
+            const startSec = state.timerTotalSec;
+            const lines = [
+              ...newAdditions.filter(a => a.triggerRemainingSec < startSec).map(a => `Add ${a.amount}${a.unit || ''} ${a.name}`),
+              ...newTasks.filter(c => (c.triggerRemainingSec ?? 0) < startSec).map(c => c.alertHeadline || c.label)
+            ];
+            if (lines.length > 0) {
+              if (state.audioEnabled) {
+                audioAlarm.unlock().then(() => {
+                  audioAlarm.playAdditionAlert();
+                });
+              }
+              if (state.vibrationEnabled) {
+                vibrate(VIBRATION_PATTERNS.ADDITION_ALERT);
+              }
+              const noticeId = [...newAdditions, ...newTasks].map(item => item.id).join('-');
+              notificationManager.sendNotification(lines.join(' • '), {
+                body: `${currentStage.title} (${Math.max(0, Math.ceil(remaining / 60))}m remaining)`,
+                tag: 'due-' + noticeId
+              });
+              activeDueNotice = { id: noticeId, title: currentStage.title, lines };
+              get().addAuditLog('NOTE', `Due: ${lines.join(', ')}`, { dueIds: noticeId.split('-'), remainingSec: Math.max(0, remaining) });
+            }
+          }
+        }
+
         // Check if countdown hit 0
         const isCompletingNow = remaining <= 0 && state.timerRemainingSec > 0;
         let nextStages = state.stages;
@@ -685,7 +774,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           const endAlertText = currentStage.flow?.endAlert || 'Stage Complete';
           
           // Collision rule: if Boil finishes and flameout additions exist, combined alert
-          const flameoutAdditions = dueAdditions.filter(a => a.triggerRemainingSec === 0);
+          const flameoutAdditions = (isByStage ? getTimedItemsDue(currentStage, remaining).additions : dueAdditions)
+            .filter(a => a.triggerRemainingSec === 0);
           const notificationTitle = currentStage.id === 'BOIL' && flameoutAdditions.length > 0
             ? 'Flameout'
             : endAlertText;
@@ -729,7 +819,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           !isCompletingNow &&
           remaining === state.timerRemainingSec &&
           sameAdditionIds(dueAdditions, state.activeAlertAdditions) &&
-          sameTaskAlert(triggeredTaskAlert, state.activeTaskAlert)
+          sameTaskAlert(triggeredTaskAlert, state.activeTaskAlert) &&
+          announcedDueIds === state.announcedDueIds
         ) {
           return;
         }
@@ -739,7 +830,9 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           stages: nextStages,
           timerRemainingSec: remaining,
           activeAlertAdditions: dueAdditions,
-          activeTaskAlert: triggeredTaskAlert
+          activeTaskAlert: triggeredTaskAlert,
+          announcedDueIds,
+          activeDueNotice
         });
       },
 
@@ -815,7 +908,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           dismissedAdditionIds: [],
           activeTaskAlert: null,
           dismissedTaskAlertIds: [],
-          alertSnoozedUntil: {}
+          alertSnoozedUntil: {},
+          announcedDueIds: [],
+          activeDueNotice: null,
+          stageCardRequested: false
         });
 
         get().addAuditLog(
@@ -1196,6 +1292,109 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       toggleVibration: () => {
         const state = get();
         set({ vibrationEnabled: !state.vibrationEnabled });
+      },
+
+      setFlowMode: (mode: FlowMode) => {
+        const state = get();
+        if (state.flowMode === mode) return;
+        const stage = state.stages[state.currentStageIndex];
+        const isByStage = mode === 'byStage';
+
+        // Mid-stage switch to By stage: items already past their trigger are not announced again
+        const pastDueIds = isByStage && stage && state.timerStatus !== 'idle'
+          ? (() => {
+              const due = getTimedItemsDue(stage, state.timerRemainingSec);
+              return [...due.additions.map(a => a.id), ...due.checklist.map(c => c.id)];
+            })()
+          : [];
+
+        set({
+          flowMode: mode,
+          announcedDueIds: pastDueIds,
+          activeDueNotice: null,
+          activeAlertAdditions: [],
+          activeTaskAlert: null,
+          stageCardRequested: isByStage && state.finishedAt === null && hasStageCardItems(stage)
+        });
+
+        if (stage) {
+          get().addAuditLog('NOTE', `Brew flow changed to ${isByStage ? 'By stage' : 'Full step'}`, { flowMode: mode });
+        }
+      },
+
+      confirmStageCard: (readings: Partial<SessionMeasurements> = {}) => {
+        // Readings first: setMeasurement records and logs each one and ticks its reminder
+        for (const [key, value] of Object.entries(readings)) {
+          if (typeof value === 'number') {
+            get().setMeasurement(key as keyof SessionMeasurements, value);
+          }
+        }
+
+        const state = get();
+        const stage = state.stages[state.currentStageIndex];
+        if (!stage) return;
+        const now = Date.now();
+
+        const additionIds = getUnconfirmedAdditions(stage).map(a => a.id);
+        const checklistIds = stage.checklist
+          .filter(c => !c.checked && !DONE_CARD_READING_IDS.includes(c.id))
+          .map(c => c.id);
+
+        const updatedStages = [...state.stages];
+        updatedStages[state.currentStageIndex] = {
+          ...stage,
+          additions: stage.additions.map(a =>
+            additionIds.includes(a.id) ? { ...a, confirmed: true, confirmedAt: now, confirmedVia: 'stage-card' as const } : a
+          ),
+          checklist: stage.checklist.map(c =>
+            checklistIds.includes(c.id) ? { ...c, checked: true, checkedAt: now } : c
+          )
+        };
+
+        if (state.audioEnabled) {
+          audioAlarm.unlock();
+          audioAlarm.playClick();
+        }
+        if (state.vibrationEnabled) {
+          vibrate(VIBRATION_PATTERNS.SHORT_CLICK);
+        }
+
+        set({
+          stages: updatedStages,
+          activeAlertAdditions: [],
+          activeTaskAlert: null,
+          stageCardRequested: false
+        });
+
+        if (additionIds.length > 0) {
+          const names = stage.additions
+            .filter(a => additionIds.includes(a.id))
+            .map(a => `${a.amount}${a.unit || ''} ${a.name}`);
+          get().addAuditLog(
+            'ADDITION_CONFIRMED',
+            `Stage card confirmed ${additionIds.length} addition(s): ${names.join(', ')}`,
+            { additionIds, via: 'stage-card' }
+          );
+        }
+        if (checklistIds.length > 0) {
+          get().addAuditLog(
+            'CHECKLIST_TOGGLE',
+            `Stage card checked ${checklistIds.length} reminder(s)`,
+            { checklistIds, checked: true, via: 'stage-card' }
+          );
+        }
+      },
+
+      dismissDueNotice: () => {
+        if (get().activeDueNotice) {
+          set({ activeDueNotice: null });
+        }
+      },
+
+      clearStageCardRequest: () => {
+        if (get().stageCardRequested) {
+          set({ stageCardRequested: false });
+        }
       }
     }),
     {
@@ -1416,7 +1615,9 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         vibrationEnabled: state.vibrationEnabled,
         dismissedAdditionIds: state.dismissedAdditionIds,
         dismissedTaskAlertIds: state.dismissedTaskAlertIds,
-        alertSnoozedUntil: state.alertSnoozedUntil
+        alertSnoozedUntil: state.alertSnoozedUntil,
+        flowMode: state.flowMode,
+        announcedDueIds: state.announcedDueIds
       })
     }
   )
@@ -1443,8 +1644,15 @@ if (typeof window !== 'undefined') {
         store.extendTimer(300);
         break;
       case 'next-stage':
-        // Same rule as the in-app NEXT button: unfinished items go through the Complete Stage dialog
-        if (hasIncompleteStageItems(store.stages[store.currentStageIndex])) {
+        // Same rules as the in-app NEXT button. By stage: unrecorded end readings open the Done card.
+        // Full step: unfinished items go through the Complete Stage dialog.
+        if (store.flowMode === 'byStage') {
+          if (getPendingEndReadings(store.stages[store.currentStageIndex]).length > 0) {
+            window.dispatchEvent(new CustomEvent(DONE_CARD_EVENT));
+          } else {
+            store.nextStage();
+          }
+        } else if (hasIncompleteStageItems(store.stages[store.currentStageIndex])) {
           window.dispatchEvent(new CustomEvent(CONFIRM_ADVANCE_EVENT));
         } else {
           store.nextStage();
