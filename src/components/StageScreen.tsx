@@ -22,7 +22,12 @@ interface PlanItem {
   when: string | null;
   text: string;
   done: boolean;
+  // Its time has just arrived: highlighted for a minute, no confirmation needed
+  flashing?: boolean;
 }
+
+// How long a timed item flashes in the stage plan once its time arrives
+const FLASH_SEC = 60;
 
 // Digits sized to fill the screen width without overflowing: monospace glyphs (tracking-tight) are ~0.53em wide, so 0.56 leaves a little margin.
 // Capped by height so landscape phones still fit the controls.
@@ -50,6 +55,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     isSessionDone,
     isCountdownDone,
     displayTimeStr,
+    activeRemainingSec,
     nextTimedEvent,
     isTimedItemDone
   } = useStageTimerView();
@@ -66,6 +72,15 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     ? (currentStage.id === 'BOIL' ? 'Flameout' : 'End')
     : `${Math.round(sec / 60)}m left`;
 
+  // Items due at the very start were just confirmed on the stage card, so they don't flash
+  const isFlashing = (sec: number) =>
+    timerStatus !== 'idle' &&
+    sec < currentStage.plannedDurationSec &&
+    activeRemainingSec <= sec &&
+    activeRemainingSec > sec - FLASH_SEC;
+
+  // Countdown stages list their timed items, which drop off once done (after their minute of flashing).
+  // Other stages list their additions and reminders as a plain reference: everything was confirmed on the card.
   const planItems: PlanItem[] = isCountdown
     ? [
         ...currentStage.additions.map(a => ({
@@ -73,7 +88,8 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           sec: a.triggerRemainingSec,
           when: timedWhen(a.triggerRemainingSec),
           text: `${a.amount} ${a.unit || 'g'} ${a.name}`,
-          done: isTimedItemDone(a.id, a.confirmed)
+          done: isTimedItemDone(a.id, a.confirmed),
+          flashing: isFlashing(a.triggerRemainingSec)
         })),
         ...currentStage.checklist
           .filter(c => c.triggerRemainingSec !== undefined)
@@ -83,19 +99,22 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             when: timedWhen(c.triggerRemainingSec!),
             text: c.label,
             // A reading prompt (mash pH) stays open until the reading is recorded or skipped
-            done: DONE_CARD_READING_IDS.includes(c.id) ? c.checked : isTimedItemDone(c.id, c.checked)
+            done: DONE_CARD_READING_IDS.includes(c.id) ? c.checked : isTimedItemDone(c.id, c.checked),
+            flashing: isFlashing(c.triggerRemainingSec!)
           }))
-      ].sort((a, b) => b.sec - a.sec)
+      ]
+        .filter(item => !item.done || item.flashing)
+        .sort((a, b) => b.sec - a.sec)
     : [
         ...currentStage.additions.map(a => ({
           id: a.id,
           when: getAdditionBadge(a, currentStage.id, boilTime).label,
           text: `${a.amount} ${a.unit || 'g'} ${a.name}`,
-          done: a.confirmed
+          done: false
         })),
         ...currentStage.checklist
           .filter(c => !(currentStage.additions.length > 0 && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)))
-          .map(c => ({ id: c.id, when: null, text: c.label, done: c.checked }))
+          .map(c => ({ id: c.id, when: null, text: c.label, done: false }))
       ];
 
   const stopwatchStr = formatTime(timerRemainingSec);
@@ -107,12 +126,10 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pt-2 pb-3 overflow-hidden select-none">
       {/* Top strip: stage, targets and the menu */}
       <div className="shrink-0 flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <span className="block text-[11px] font-mono font-bold text-amber-400 uppercase tracking-wider">
-            Stage {currentStageIndex + 1}/{stages.length}
-          </span>
-          <h1 className="text-lg sm:text-xl font-black text-white leading-tight truncate">{currentStage.title}</h1>
-        </div>
+        <h1 className="min-w-0 flex-1 text-lg sm:text-xl font-black text-white leading-tight truncate">
+          <span className="font-mono text-sm text-amber-400 mr-2">{currentStageIndex + 1}/{stages.length}</span>
+          {currentStage.title}
+        </h1>
         {currentStage.parameters?.targetTemp !== undefined && (
           <span className="shrink-0 flex items-center space-x-1 text-xs font-mono font-bold text-amber-400 bg-amber-950/70 px-2 py-1 rounded border border-amber-800/60">
             <Thermometer className="w-3.5 h-3.5" />
@@ -222,19 +239,25 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           {planItems.map(item => (
             <li
               key={item.id}
-              className={`flex items-center gap-2 px-3 py-1.5 text-sm ${item.done ? 'text-gray-500' : 'text-gray-200'}`}
+              className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
+                item.flashing ? 'bg-emerald-500/20 text-white font-bold animate-pulse' : item.done ? 'text-gray-500' : 'text-gray-200'
+              }`}
             >
-              {item.done ? (
+              {item.flashing ? (
+                <span className="w-4 h-4 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+              ) : item.done ? (
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />
               ) : (
                 <span className="w-4 h-4 shrink-0 rounded-full border border-slate-600" />
               )}
               {item.when && (
-                <span className={`shrink-0 w-[4.5rem] text-[11px] font-mono font-bold uppercase ${item.done ? 'text-gray-600' : 'text-cyan-300'}`}>
-                  {item.when}
+                <span className={`shrink-0 w-[4.5rem] text-[11px] font-mono font-bold uppercase ${
+                  item.flashing ? 'text-emerald-300' : item.done ? 'text-gray-600' : 'text-cyan-300'
+                }`}>
+                  {item.flashing ? 'Now' : item.when}
                 </span>
               )}
-              <span className={`min-w-0 truncate ${item.done ? 'line-through' : ''}`}>{item.text}</span>
+              <span className={`min-w-0 truncate ${item.done && !item.flashing ? 'line-through' : ''}`}>{item.text}</span>
             </li>
           ))}
         </ul>

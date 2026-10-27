@@ -27,6 +27,8 @@ export const StageCard: React.FC<StageCardProps> = ({ onClose }) => {
   const confirmFlowStage = useBrewStore(state => state.confirmFlowStage);
 
   const [readings, setReadings] = useState<Partial<SessionMeasurements>>({});
+  // Readings are optional, so they stay tucked away behind one link until asked for
+  const [showReadings, setShowReadings] = useState(false);
 
   const stage = stages[currentStageIndex];
   if (!stage) return null;
@@ -89,11 +91,9 @@ export const StageCard: React.FC<StageCardProps> = ({ onClose }) => {
             <ClipboardCheck className="w-5 h-5 text-emerald-400 shrink-0" />
             <span className="truncate">{stage.title}</span>
           </h3>
-          <p className="text-xs text-gray-400 mt-1">
-            {additions.length > 0 || reminders.length > 0
-              ? 'Check everything below is in hand, then confirm it all in one go.'
-              : 'Nothing to prepare for this stage.'}
-          </p>
+          {additions.length === 0 && reminders.length === 0 && readingItems.length === 0 && (
+            <p className="text-xs text-gray-400 mt-1">Nothing to prepare for this stage.</p>
+          )}
         </div>
 
         {/* Body */}
@@ -163,7 +163,24 @@ export const StageCard: React.FC<StageCardProps> = ({ onClose }) => {
             </section>
           )}
 
-          {readingItems.length > 0 && (
+          {readingItems.length > 0 && !showReadings && (
+            <button
+              type="button"
+              onClick={() => {
+                // Asking for a reading opens its stepper at the target value, ready to nudge
+                setReadings(Object.fromEntries(readingItems.map(item => {
+                  const stepper = getMeasurementStepper(item.id, stage, recipe)!;
+                  return [stepper.key, stepper.defaultValue];
+                })));
+                setShowReadings(true);
+              }}
+              className="w-full text-left px-2.5 py-2 rounded-lg border border-dashed border-slate-700 text-sm font-semibold text-amber-300 hover:bg-slate-900/60 touch-press"
+            >
+              + Add reading <span className="text-gray-400 font-normal">· {readingItems.map(c => c.label).join(', ')}</span>
+            </button>
+          )}
+
+          {readingItems.length > 0 && showReadings && (
             <section>
               <h4 className="text-[11px] font-mono font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                 Readings (optional)
