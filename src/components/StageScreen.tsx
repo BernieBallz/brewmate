@@ -24,9 +24,11 @@ interface PlanItem {
   when: string | null;
   text: string;
   done: boolean;
+  // Countdown stages: seconds remaining when the item is due
+  sec?: number;
   // Its time has just arrived: highlighted for a minute, no confirmation needed
   flashing?: boolean;
-  // First minute after Start with nothing due yet: the first item to come is flagged as a heads-up
+  // The minute before its time arrives: flagged amber as a heads-up
   headsUp?: boolean;
 }
 
@@ -112,10 +114,20 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           }))
       ].sort((a, b) => b.sec - a.sec);
 
-  const isFirstMinute = timerStatus !== 'idle' && activeRemainingSec > currentStage.plannedDurationSec - FLASH_SEC;
-  const firstPendingIdx = timedPlanItems.findIndex(item => !item.done);
-  if (isFirstMinute && firstPendingIdx >= 0 && !timedPlanItems.some(item => item.flashing)) {
-    timedPlanItems[firstPendingIdx] = { ...timedPlanItems[firstPendingIdx], headsUp: true };
+  // Heads-up: amber for the minute before an item's time, then green "NOW" for the minute after, then struck through
+  for (let i = 0; i < timedPlanItems.length; i++) {
+    const item = timedPlanItems[i];
+    const sec = item.sec;
+    if (
+      sec !== undefined &&
+      timerStatus !== 'idle' &&
+      !item.flashing &&
+      sec < currentStage.plannedDurationSec &&
+      activeRemainingSec > sec &&
+      activeRemainingSec <= sec + FLASH_SEC
+    ) {
+      timedPlanItems[i] = { ...item, headsUp: true };
+    }
   }
 
   const planItems: PlanItem[] = isCountdown
