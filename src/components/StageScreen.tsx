@@ -140,8 +140,12 @@ export const StageScreen: React.FC<StageScreenProps> = ({
       {/* Header: stage number, targets and controls on top; the stage name gets its own full-width line */}
       <div className="shrink-0">
       <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 font-mono text-xs font-bold text-amber-400 uppercase tracking-wider">
-          Stage {currentStageIndex + 1}/{stages.length}
+        {/* Recipe name (truncates) with the stage count */}
+        <span className="min-w-0 flex-1 flex items-baseline gap-1.5 text-xs font-bold">
+          <span className="min-w-0 truncate text-gray-300">{recipe?.name}</span>
+          <span className="shrink-0 font-mono text-amber-400 uppercase tracking-wider">
+            {recipe?.name ? '· ' : 'Stage '}{currentStageIndex + 1}/{stages.length}
+          </span>
         </span>
         {currentStage.parameters?.targetTemp !== undefined && (
           <span className="shrink-0 flex items-center space-x-1 text-xs font-mono font-bold text-amber-400 bg-amber-950/70 px-2 py-1 rounded border border-amber-800/60">
