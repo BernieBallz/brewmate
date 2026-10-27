@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS, DONE_CARD_READING_IDS, getDueReadings } from '../store/brewStore';
 import { useStageTimerView, formatTime, formatWaitCountdown } from '../hooks/useStageTimerView';
 import { getAdditionBadge } from '../utils/additionDisplay';
@@ -52,6 +52,21 @@ export const StageScreen: React.FC<StageScreenProps> = ({
   const recipe = useBrewStore(state => state.recipe);
   const announcedDueIds = useBrewStore(state => state.announcedDueIds);
   const { isFullscreen, toggleFullscreen, canFullscreen } = useFullscreen();
+
+  // When a new group of items starts flashing, scroll the stage plan so the group is in view.
+  // The list marks its flashing rows; runs after each render but only scrolls when the group changes.
+  const planListRef = useRef<HTMLUListElement>(null);
+  const scrolledGroupRef = useRef('');
+  useEffect(() => {
+    const list = planListRef.current;
+    const group = list?.dataset.activeGroup ?? '';
+    if (!list || group === scrolledGroupRef.current) return;
+    scrolledGroupRef.current = group;
+    const firstActive = list.querySelector<HTMLElement>('[data-active="true"]');
+    if (firstActive) {
+      list.scrollTo({ top: firstActive.offsetTop, behavior: 'smooth' });
+    }
+  });
   const updateReady = useAppUpdateReady();
   const {
     stages,
@@ -294,15 +309,20 @@ export const StageScreen: React.FC<StageScreenProps> = ({
 
       {/* Stage plan (read-only) */}
       {!isSessionDone && planItems.length > 0 && (
-        <ul className="shrink-0 max-h-[24dvh] overflow-y-auto overscroll-contain rounded-xl bg-slate-900/70 border border-slate-800 divide-y divide-slate-800/80">
+        <ul
+          ref={planListRef}
+          data-active-group={planItems.filter(item => item.flashing || item.headsUp).map(item => item.id).join(',')}
+          className="relative shrink-0 max-h-[24dvh] overflow-y-auto overscroll-contain rounded-xl bg-slate-900/70 border border-slate-800 divide-y divide-slate-800/80"
+        >
           {planItems.map(item => (
             <li
               key={item.id}
+              data-active={item.flashing || item.headsUp ? 'true' : undefined}
               className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
                 item.flashing || item.headsUp ? 'text-white font-bold' : item.done ? 'text-gray-500' : 'text-gray-200'
               }`}
             >
-              {/* The bullet itself flashes: green when the item is due now, amber as the first-minute heads-up */}
+              {/* The bullet itself flashes: green when the item is due now, amber in the minute before */}
               {item.flashing || item.headsUp ? (
                 <span className="relative w-4 h-4 shrink-0 flex items-center justify-center">
                   <span className={`absolute inset-0 rounded-full animate-ping ${item.flashing ? 'bg-emerald-400/70' : 'bg-amber-400/70'}`} />
