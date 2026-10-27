@@ -6,7 +6,9 @@ import { getReadingShortName } from '../utils/measurementSteppers';
 import { CountdownProgressBar } from './CountdownProgressBar';
 import { StageActions } from './StageActions';
 import { StrikeOffsetControl } from './StrikeOffsetControl';
-import { Menu, Thermometer, Droplets, CheckCircle2, Check, Gauge } from 'lucide-react';
+import { useFullscreen } from '../hooks/useFullscreen';
+import { useAppUpdateReady } from '../hooks/useAppLifecycle';
+import { Menu, Thermometer, Droplets, CheckCircle2, Check, Gauge, Maximize, Minimize } from 'lucide-react';
 
 interface StageScreenProps {
   onOpenMenu: () => void;
@@ -47,6 +49,8 @@ export const StageScreen: React.FC<StageScreenProps> = ({
 }) => {
   const recipe = useBrewStore(state => state.recipe);
   const announcedDueIds = useBrewStore(state => state.announcedDueIds);
+  const { isFullscreen, toggleFullscreen, canFullscreen } = useFullscreen();
+  const updateReady = useAppUpdateReady();
   const {
     stages,
     currentStageIndex,
@@ -132,7 +136,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
   const dueReadings = getDueReadings(currentStage, announcedDueIds);
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pt-2 pb-3 overflow-hidden select-none">
+    <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pt-2 pb-3 overflow-y-auto overscroll-contain select-none">
       {/* Top strip: stage, targets and the menu */}
       <div className="shrink-0 flex items-center gap-2">
         <h1 className="min-w-0 flex-1 text-2xl sm:text-3xl font-black text-white leading-tight truncate">
@@ -151,18 +155,37 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             <span>{currentStage.parameters.targetVolume}L</span>
           </span>
         )}
+        {/* Full screen hides the browser's address bar (not shown in the installed app, which has none) */}
+        {canFullscreen && (
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+            className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center border touch-press ${
+              isFullscreen
+                ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
+                : 'bg-amber-500 hover:bg-amber-400 border-amber-400 text-slate-950'
+            }`}
+          >
+            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5 stroke-[2.5]" />}
+          </button>
+        )}
         <button
           type="button"
           onClick={onOpenMenu}
-          aria-label="Open menu"
-          className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-slate-900 hover:bg-slate-800 border border-slate-700 text-gray-200 touch-press"
+          aria-label={updateReady ? 'Open menu (update ready)' : 'Open menu'}
+          className="relative shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-slate-900 hover:bg-slate-800 border border-slate-700 text-gray-200 touch-press"
         >
           <Menu className="w-5 h-5" />
+          {/* Dot marks a downloaded update waiting in the menu */}
+          {updateReady && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-cyan-400 border-2 border-slate-950" />
+          )}
         </button>
       </div>
 
       {/* Hero: the timer, stopwatch or stage confirmation fills the free space */}
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center">
+      <div className="flex-1 min-h-[9rem] flex flex-col items-center justify-center text-center">
         {isSessionDone ? (
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-emerald-950/90 border-2 border-emerald-500/80 flex items-center justify-center text-emerald-400 mb-2 shadow-[0_0_25px_rgba(16,185,129,0.4)]">

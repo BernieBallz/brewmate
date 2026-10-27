@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useBrewStore } from '../store/brewStore';
 import { useNotificationPermission } from '../hooks/useNotificationPermission';
 import { useAppUpdateReady } from '../hooks/useAppLifecycle';
-import { notificationManager } from '../utils/notificationManager';
+import { useFullscreen } from '../hooks/useFullscreen';
 import {
   Bell,
   BellOff,
@@ -28,41 +28,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenMenu, onOpenAlerts }
   const currentStage = stages[currentStageIndex];
   const alertPermission = useNotificationPermission();
   const updateReady = useAppUpdateReady();
-  const isStandaloneApp = notificationManager.isStandalone();
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    };
-
-    document.addEventListener('fullscreenchange', handleFsChange);
-    document.addEventListener('webkitfullscreenchange' as any, handleFsChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFsChange);
-      document.removeEventListener('webkitfullscreenchange' as any, handleFsChange);
-    };
-  }, []);
-
-  const toggleFullscreen = async () => {
-    try {
-      if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-        if (document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
-        } else if ((document.documentElement as any).webkitRequestFullscreen) {
-          await (document.documentElement as any).webkitRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
-        }
-      }
-    } catch (err) {
-      console.warn('Fullscreen error:', err);
-    }
-  };
+  const { isFullscreen, toggleFullscreen, canFullscreen } = useFullscreen();
 
   return (
     <header className="h-9 bg-brew-card/95 backdrop-blur border-b border-brew-border px-3 flex items-center justify-between shrink-0 z-20 select-none">
@@ -107,7 +73,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenMenu, onOpenAlerts }
         </button>
 
         {/* Fullscreen Toggle (not needed in the installed app, which has no address bar); icon-only on phones */}
-        {!isStandaloneApp && (
+        {canFullscreen && (
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen (Hide address bar)'}

@@ -216,6 +216,7 @@ export function App() {
         onConfirmJump={(stageIndex) => openAdvanceModal(stageIndex)}
         onOpenSessionLog={() => setIsSessionLogOpen(true)}
         onOpenAlertSetup={() => setIsAlertSetupOpen(true)}
+        onSkipStage={() => openAdvanceModal()}
       />
 
       <ConfirmAdvanceModal

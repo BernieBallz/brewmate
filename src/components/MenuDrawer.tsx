@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Sparkles,
   ScrollText,
-  Bell
+  Bell,
+  SkipForward
 } from 'lucide-react';
 import type { FlowMode } from '../types/session';
 import { appLifecycle, type UpdateCheckResult } from '../utils/appLifecycle';
@@ -43,6 +44,7 @@ interface MenuDrawerProps {
   onConfirmJump: (stageIndex: number) => void;
   onOpenSessionLog: () => void;
   onOpenAlertSetup: () => void;
+  onSkipStage: () => void;
 }
 
 export const MenuDrawer: React.FC<MenuDrawerProps> = ({
@@ -54,7 +56,8 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   onOpenRemoveConfirm,
   onConfirmJump,
   onOpenSessionLog,
-  onOpenAlertSetup
+  onOpenAlertSetup,
+  onSkipStage
 }) => {
   const { 
     stages, 
@@ -67,8 +70,12 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
     recipe,
     timerStatus,
     flowMode,
-    setFlowMode
+    setFlowMode,
+    finishedAt
   } = useBrewStore();
+
+  // Skipping is possible until the brew is finished and while there is a next stage
+  const canSkipStage = finishedAt === null && currentStageIndex < stages.length - 1;
 
   const canInstall = useCanInstallApp();
   const updateReady = useAppUpdateReady();
@@ -168,6 +175,19 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
               {FLOW_OPTIONS.find(option => option.mode === flowMode)?.hint}
             </span>
           </div>
+
+          {canSkipStage && (
+            <button
+              onClick={() => {
+                onSkipStage();
+                onClose();
+              }}
+              className="w-full flex items-center space-x-2.5 p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-gray-200 text-xs font-mono font-bold tracking-wider uppercase border border-slate-800 hover:border-slate-700 transition-all"
+            >
+              <SkipForward className="w-4 h-4 text-amber-400" />
+              <span>Skip stage</span>
+            </button>
+          )}
 
           <button
             onClick={() => {
