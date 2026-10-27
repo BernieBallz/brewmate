@@ -80,7 +80,8 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     activeRemainingSec <= sec &&
     activeRemainingSec > sec - FLASH_SEC;
 
-  // Countdown stages list their timed items, which drop off once done (after their minute of flashing).
+  // Countdown stages list their timed items; once its time has passed (after its minute of flashing)
+  // an item stays on the list, ticked and struck through.
   // Other stages list their additions and reminders as a plain reference: everything was confirmed on the card.
   const timedPlanItems: PlanItem[] = [
         ...currentStage.additions.map(a => ({
@@ -102,9 +103,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             done: DONE_CARD_READING_IDS.includes(c.id) ? c.checked : isTimedItemDone(c.id, c.checked),
             flashing: isFlashing(c.triggerRemainingSec!)
           }))
-      ]
-        .filter(item => !item.done || item.flashing)
-        .sort((a, b) => b.sec - a.sec);
+      ].sort((a, b) => b.sec - a.sec);
 
   const isFirstMinute = timerStatus !== 'idle' && activeRemainingSec > currentStage.plannedDurationSec - FLASH_SEC;
   if (isFirstMinute && timedPlanItems.length > 0 && !timedPlanItems.some(item => item.flashing)) {
