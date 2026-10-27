@@ -122,12 +122,12 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           id: a.id,
           when: getAdditionBadge(a, currentStage.id, boilTime).label,
           text: `${a.amount} ${a.unit || 'g'} ${a.name}`,
-          // Additions go in as the stage starts (e.g. sparge salts), so they're struck through once it has
+          // Once the stopwatch is going the stage is under way: its additions and reminders are struck through
           done: timerStatus !== 'idle' || flowPhase === 'finished'
         })),
         ...currentStage.checklist
           .filter(c => !(currentStage.additions.length > 0 && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)))
-          .map(c => ({ id: c.id, when: null, text: c.label, done: false }))
+          .map(c => ({ id: c.id, when: null, text: c.label, done: timerStatus !== 'idle' || flowPhase === 'finished' }))
       ];
 
   const stopwatchStr = formatTime(timerRemainingSec);
