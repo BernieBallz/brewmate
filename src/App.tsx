@@ -143,7 +143,7 @@ export function App() {
   }, []);
 
   const progressPercent = stages.length > 0 ? Math.round(((currentStageIndex + 1) / stages.length) * 100) : 0;
-  const shellClassName = 'flex flex-col h-screen h-[100dvh] w-screen bg-brew-dark text-gray-100 overflow-hidden font-display pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]';
+  const shellClassName = 'flex flex-col h-screen supports-[height:100dvh]:h-[100dvh] w-full bg-brew-dark text-gray-100 overflow-hidden font-display pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]';
 
   // No recipe loaded yet: only the welcome screen. The alerts explainer (if still due) waits until after loading.
   if (stages.length === 0) {

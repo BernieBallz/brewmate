@@ -31,9 +31,10 @@ interface PlanItem {
 // How long a timed item flashes in the stage plan once its time arrives
 const FLASH_SEC = 60;
 
-// Digits sized to fill the screen width without overflowing: monospace glyphs (tracking-tight) are ~0.53em wide, so 0.56 leaves a little margin.
+// Digits sized to fill the screen width without overflowing. Monospace glyphs run ~0.53em wide on desktop but
+// ~0.6em with Android's fallback monospace font, so 0.64 leaves a margin on both.
 // Capped by height so landscape phones still fit the controls.
-const digitFontSize = (text: string) => `min(calc((100vw - 2rem) / ${(text.length * 0.56).toFixed(2)}), 26dvh)`;
+const digitFontSize = (text: string) => `min(calc((100vw - 2.5rem) / ${(text.length * 0.64).toFixed(2)}), 22dvh)`;
 
 // By stage: one stage at a time, full screen. Big timer, what's next, the stage plan and the action buttons.
 export const StageScreen: React.FC<StageScreenProps> = ({
@@ -134,8 +135,8 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pt-2 pb-3 overflow-hidden select-none">
       {/* Top strip: stage, targets and the menu */}
       <div className="shrink-0 flex items-center gap-2">
-        <h1 className="min-w-0 flex-1 text-lg sm:text-xl font-black text-white leading-tight truncate">
-          <span className="font-mono text-sm text-amber-400 mr-2">{currentStageIndex + 1}/{stages.length}</span>
+        <h1 className="min-w-0 flex-1 text-2xl sm:text-3xl font-black text-white leading-tight truncate">
+          <span className="font-mono text-base text-amber-400 mr-2 align-middle">{currentStageIndex + 1}/{stages.length}</span>
           {currentStage.title}
         </h1>
         {currentStage.parameters?.targetTemp !== undefined && (
