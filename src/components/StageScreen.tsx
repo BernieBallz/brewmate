@@ -137,12 +137,12 @@ export const StageScreen: React.FC<StageScreenProps> = ({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pt-2 pb-3 overflow-y-auto overscroll-contain select-none">
-      {/* Top strip: stage, targets and the menu */}
-      <div className="shrink-0 flex items-center gap-2">
-        <h1 className="min-w-0 flex-1 text-2xl sm:text-3xl font-black text-white leading-tight truncate">
-          <span className="font-mono text-base text-amber-400 mr-2 align-middle">{currentStageIndex + 1}/{stages.length}</span>
-          {currentStage.title}
-        </h1>
+      {/* Header: stage number, targets and controls on top; the stage name gets its own full-width line */}
+      <div className="shrink-0">
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 font-mono text-xs font-bold text-amber-400 uppercase tracking-wider">
+          Stage {currentStageIndex + 1}/{stages.length}
+        </span>
         {currentStage.parameters?.targetTemp !== undefined && (
           <span className="shrink-0 flex items-center space-x-1 text-xs font-mono font-bold text-amber-400 bg-amber-950/70 px-2 py-1 rounded border border-amber-800/60">
             <Thermometer className="w-3.5 h-3.5" />
@@ -182,6 +182,14 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-cyan-400 border-2 border-slate-950" />
           )}
         </button>
+      </div>
+      {/* Keyed by stage so the name eases in each time the stage changes */}
+      <h1
+        key={currentStageIndex}
+        className="mt-1 text-3xl sm:text-4xl font-black text-white leading-tight break-words motion-safe:animate-stage-in"
+      >
+        {currentStage.title}
+      </h1>
       </div>
 
       {/* Hero: the timer, stopwatch or stage confirmation fills the free space */}

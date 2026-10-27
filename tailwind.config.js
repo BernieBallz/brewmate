@@ -25,6 +25,16 @@ export default {
         mono: ['JetBrains Mono', 'Roboto Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
         display: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
+      // Stage name easing in on the By stage screen (strong ease-out, short, no bounce)
+      keyframes: {
+        'stage-in': {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        }
+      },
+      animation: {
+        'stage-in': 'stage-in 320ms cubic-bezier(0.23, 1, 0.32, 1) both'
+      },
       screens: {
         'landscape-touch': { 'raw': '(orientation: landscape) and (max-height: 500px)' },
       }
