@@ -47,19 +47,27 @@ export const SessionLogPanel: React.FC = () => {
             <span className="text-emerald-400 font-bold">
               {measurements.preBoilGravityActual !== undefined
                 ? `${measurements.preBoilGravityActual.toFixed(3)}`
-                : `${recipe?.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '1.039'}`}
+                : `${recipe?.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '1.039'} (target)`}
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-            <span className="text-gray-400">Knockout SG</span>
+            <span className="text-gray-400">OG</span>
             <span className="text-purple-400 font-bold">
               {measurements.postBoilGravityActual !== undefined
                 ? `${measurements.postBoilGravityActual.toFixed(3)}`
-                : `${recipe?.og ? recipe.og.toFixed(3) : '1.045'}`}
+                : `${recipe?.og ? recipe.og.toFixed(3) : '1.045'} (target)`}
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-            <span className="text-gray-400">Lauter Time</span>
+            <span className="text-gray-400">Exit Temp</span>
+            <span className="text-amber-400 font-bold">
+              {measurements.knockoutTempActual !== undefined
+                ? `${measurements.knockoutTempActual.toFixed(1)}°C`
+                : `${(recipe?.primaryTemp ?? 19).toFixed(1)}°C (target)`}
+            </span>
+          </div>
+          <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
+            <span className="text-gray-400">Sparge Time</span>
             <span className={lauterStage?.actualDurationSec !== undefined && lauterStage.actualDurationSec > 0 ? "text-emerald-400 font-bold" : "text-gray-500 font-bold"}>
               {lauterStage?.actualDurationSec !== undefined && lauterStage.actualDurationSec > 0
                 ? `⏱️ ${Math.floor(lauterStage.actualDurationSec / 60)}m ${(lauterStage.actualDurationSec % 60).toString().padStart(2, '0')}s`

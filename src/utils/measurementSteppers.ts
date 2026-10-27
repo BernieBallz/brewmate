@@ -41,6 +41,9 @@ export const getMeasurementStepper = (
     case 'preboil-sg':
       return { key: 'preBoilGravityActual', label: 'Recorded SG:', step: 0.001, stepLabel: '1pt', decimals: 3, suffix: '', color: 'emerald',
         defaultValue: recipe?.preBoilGravity || 1.039 };
+    case 'chiller-exit-temp':
+      return { key: 'knockoutTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
+        defaultValue: stageTargetTemp ?? recipe?.primaryTemp ?? 19 };
     case 'postboil-sg':
       return { key: 'postBoilGravityActual', label: 'Recorded SG:', step: 0.001, stepLabel: '1pt', decimals: 3, suffix: '', color: 'purple',
         defaultValue: recipe?.og || 1.045 };
@@ -53,7 +56,8 @@ export const getMeasurementStepper = (
 const READING_SHORT_NAMES: Record<string, string> = {
   'ph-sample': 'pH',
   'preboil-sg': 'pre-boil SG',
-  'postboil-sg': 'OG'
+  'postboil-sg': 'OG',
+  'chiller-exit-temp': 'exit temp'
 };
 
 export const getReadingShortName = (checklistId: string, fallback: string): string =>

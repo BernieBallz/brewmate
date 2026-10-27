@@ -101,9 +101,9 @@ export const hasIncompleteStageItems = (stage: BrewStage | undefined): boolean =
 // Fired when something outside the UI (the lock-screen Next Stage button) needs the By stage Done card
 export const DONE_CARD_EVENT = 'brewmate:done-card';
 
-// Readings taken during or at the end of a stage (mash pH mid-rest, pre-boil SG after sparge, OG at knockout).
+// Readings taken during or at the end of a stage (mash pH mid-rest, pre-boil SG after sparge, exit temp and OG at knockout).
 // By stage collects these on the Done card; the start card only takes readings made as the stage begins.
-export const DONE_CARD_READING_IDS = ['ph-sample', 'preboil-sg', 'postboil-sg'];
+export const DONE_CARD_READING_IDS = ['ph-sample', 'preboil-sg', 'chiller-exit-temp', 'postboil-sg'];
 
 // Unrecorded Done card readings; By stage shows the Done card for these before moving on
 export const getPendingEndReadings = (stage: BrewStage | undefined): ChecklistItem[] =>
@@ -1230,7 +1230,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           mashInTempActual: 'mash-temp-init',
           mashPhActual: 'ph-sample',
           preBoilGravityActual: 'preboil-sg',
-          postBoilGravityActual: 'postboil-sg'
+          postBoilGravityActual: 'postboil-sg',
+          knockoutTempActual: 'chiller-exit-temp'
         };
         const linkedChecklistId = metricToChecklistId[key];
         const currentStage = state.stages[state.currentStageIndex];
@@ -1478,6 +1479,11 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           // "Check mash temp" on Mash Rest repeated the Mash In temperature check, so it was removed
           if (mashRest) {
             mashRest.checklist = mashRest.checklist.filter(c => c.id !== 'mash-temp-stable');
+          }
+          // "Pitch temp" on Yeast Pitch repeated Knockout's "Exit temp" check, so it was removed
+          const pitchStage = state.stages.find(s => s.id === 'YEAST_PITCH');
+          if (pitchStage) {
+            pitchStage.checklist = pitchStage.checklist.filter(c => c.id !== 'temp-confirm');
           }
           if (mashIn && mashIn.flow?.nextLabel === 'NEXT: START MASH') {
             mashIn.flow.nextLabel = 'NEXT: START MASH REST';

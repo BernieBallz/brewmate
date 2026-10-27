@@ -305,13 +305,19 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
                     </span>
                   </div>
                   <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-gray-400 block font-mono">Post-Boil SG</span>
+                    <span className="text-[10px] text-gray-400 block font-mono">OG</span>
                     <span className="text-xs sm:text-sm font-bold text-purple-400 font-mono">
                       {measurements.postBoilGravityActual !== undefined ? `${measurements.postBoilGravityActual} SG` : '--'}
                     </span>
                   </div>
                   <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-gray-400 block font-mono">Lauter Time</span>
+                    <span className="text-[10px] text-gray-400 block font-mono">Exit Temp</span>
+                    <span className="text-xs sm:text-sm font-bold text-amber-400 font-mono">
+                      {measurements.knockoutTempActual !== undefined ? `${measurements.knockoutTempActual}°C` : '--'}
+                    </span>
+                  </div>
+                  <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-gray-400 block font-mono">Sparge Time</span>
                     <span className="text-xs sm:text-sm font-bold text-cyan-400 font-mono">
                       {stages.find(s => s.id === 'LAUTER_SPARGE')?.actualDurationSec
                         ? formatDurationOnly(stages.find(s => s.id === 'LAUTER_SPARGE')!.actualDurationSec)

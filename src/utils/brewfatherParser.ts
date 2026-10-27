@@ -502,7 +502,6 @@ export function buildYeastPitchStage(
     flow,
     additions: pitchAdditions,
     checklist: [
-      { id: 'temp-confirm', label: `Pitch temp ${pitchTemp}°C`, explanation: 'Verify fermenter probe reads <= pitch temp before pitching yeast', checked: false },
       { id: 'pitch-additions', label: 'Yeast + aids', explanation: 'Dose yeast slurry/brink, ALDC enzyme, and oxygenation aids into FV', checked: false },
       { id: 'temp-controller-set', label: `Set controller ${pitchTemp}°C`, explanation: 'Set fermenter temperature controller to target primary setpoint - check the temp probe!', checked: false }
     ],

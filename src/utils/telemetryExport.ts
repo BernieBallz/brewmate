@@ -234,7 +234,8 @@ export const generateCsvReport = (options: TelemetryExportOptions): string => {
       'Pre-Boil SG',
       'Mash pH',
       'Strike Temp Actual (C)',
-      'Mash In Temp Actual (C)'
+      'Mash In Temp Actual (C)',
+      'Exit Temp Actual (C)'
     ]
       .map(escapeCsv)
       .join(',')
@@ -253,7 +254,8 @@ export const generateCsvReport = (options: TelemetryExportOptions): string => {
       measurements.preBoilGravityActual ?? 'N/A',
       measurements.mashPhActual ?? 'N/A',
       measurements.strikeTempActual ?? 'N/A',
-      measurements.mashInTempActual ?? 'N/A'
+      measurements.mashInTempActual ?? 'N/A',
+      measurements.knockoutTempActual ?? 'N/A'
     ]
       .map(escapeCsv)
       .join(',')
@@ -421,19 +423,19 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
     } (Target: ${recipe?.preBoilGravity || 'N/A'})`
   );
   lines.push(
-    `- **Post-Boil Original Gravity (OG)**: ${
+    `- **OG**: ${
       measurements.postBoilGravityActual !== undefined ? `${measurements.postBoilGravityActual} SG` : 'Not recorded'
     } (Target: ${recipe?.og || 'N/A'})`
   );
   lines.push(
-    `- **Chiller Knockout Temp**: ${
+    `- **Exit Temp**: ${
       measurements.knockoutTempActual !== undefined ? `${measurements.knockoutTempActual} °C` : 'Not recorded'
     } (Target: ${recipe?.primaryTemp || 19}°C)`
   );
 
   const lauterStage = stages.find((s) => s.id === 'LAUTER_SPARGE');
   if (lauterStage && lauterStage.actualDurationSec > 0) {
-    lines.push(`- **Sparge Duration**: ${formatDurationOnly(lauterStage.actualDurationSec)} (Stopwatch)`);
+    lines.push(`- **Sparge Time**: ${formatDurationOnly(lauterStage.actualDurationSec)} (Stopwatch)`);
   }
   const coolingStage = stages.find((s) => s.id === 'COOLING_RECIRC');
   if (coolingStage && coolingStage.actualDurationSec > 0) {

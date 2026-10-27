@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useBrewStore } from '../../store/brewStore';
+import { useBrewStore, getPendingEndReadings } from '../../store/brewStore';
 import testRecipe from '../fixtures/testRecipe.json';
 import type { BrewfatherRecipe } from '../../types/brewfather';
 import { generateTelemetryData, generateCsvReport, generateMarkdownReport } from '../../utils/telemetryExport';
@@ -68,5 +68,28 @@ describe('Temperature measurements (strike and mash-in)', () => {
     const mashRest = state().stages.find(s => s.id === 'MASH_SCHEDULE')!;
     expect(mashRest.checklist.map(c => c.id)).not.toContain('mash-temp-stable');
     expect(mashRest.checklist[0].id).toBe('ph-sample');
+  });
+
+  it('records the Knockout exit temp once (no repeat on Yeast Pitch) and exports it', () => {
+    const pitch = state().stages.find(s => s.id === 'YEAST_PITCH')!;
+    expect(pitch.checklist.map(c => c.id)).not.toContain('temp-confirm');
+
+    const knockoutIdx = state().stages.findIndex(s => s.id === 'KNOCKOUT_TRANSFER');
+    state().goToStage(knockoutIdx);
+    expect(getPendingEndReadings(state().stages[knockoutIdx]).map(c => c.id)).toContain('chiller-exit-temp');
+
+    state().setMeasurement('knockoutTempActual', 19.5);
+    expect(checklistItem('KNOCKOUT_TRANSFER', 'chiller-exit-temp')?.checked).toBe(true);
+
+    expect(generateTelemetryData(exportOptions()).measurements.knockoutTempActualC).toBe(19.5);
+    expect(generateCsvReport(exportOptions())).toContain('"Exit Temp Actual (C)"');
+    expect(generateMarkdownReport(exportOptions())).toContain('**Exit Temp**: 19.5 °C');
+  });
+
+  it('uses one name per reading in the Markdown report', () => {
+    const markdown = generateMarkdownReport(exportOptions());
+    expect(markdown).toContain('**OG**:');
+    expect(markdown).not.toContain('Post-Boil Original Gravity');
+    expect(markdown).not.toContain('Chiller Knockout Temp');
   });
 });
