@@ -79,9 +79,11 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     ? (currentStage.id === 'BOIL' ? 'Flameout' : 'End')
     : `${Math.round(sec / 60)}m left`;
 
-  // Items due at the start (e.g. all Whirlpool hops) flash for the first minute after Start
+  // Items due at the start (e.g. Whirlpool hops) are simply struck through once the timer starts;
+  // later items flash for a minute when their time arrives
   const isFlashing = (sec: number) =>
     timerStatus !== 'idle' &&
+    sec < currentStage.plannedDurationSec &&
     activeRemainingSec <= sec &&
     activeRemainingSec > sec - FLASH_SEC;
 
@@ -111,8 +113,9 @@ export const StageScreen: React.FC<StageScreenProps> = ({
       ].sort((a, b) => b.sec - a.sec);
 
   const isFirstMinute = timerStatus !== 'idle' && activeRemainingSec > currentStage.plannedDurationSec - FLASH_SEC;
-  if (isFirstMinute && timedPlanItems.length > 0 && !timedPlanItems.some(item => item.flashing)) {
-    timedPlanItems[0] = { ...timedPlanItems[0], headsUp: true };
+  const firstPendingIdx = timedPlanItems.findIndex(item => !item.done);
+  if (isFirstMinute && firstPendingIdx >= 0 && !timedPlanItems.some(item => item.flashing)) {
+    timedPlanItems[firstPendingIdx] = { ...timedPlanItems[firstPendingIdx], headsUp: true };
   }
 
   const planItems: PlanItem[] = isCountdown
