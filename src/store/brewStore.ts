@@ -1569,7 +1569,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           const legacyStageUpdates: Record<string, { title?: [string, string]; shortCode?: [string, string]; estimateSec?: [number, number] }> = {
             MASH_SCHEDULE: { shortCode: ['MASH', 'MASH REST'] },
             LAUTER_SPARGE: { title: ['Lauter & Sparge', 'Sparge'], shortCode: ['LAUTER', 'SPARGE'], estimateSec: [2700, 3600] },
-            COOLING_RECIRC: { estimateSec: [600, 1200] },
+            COOLING_RECIRC: { title: ['Cooling Recirc', 'Chill'], estimateSec: [600, 1200] },
             KNOCKOUT_TRANSFER: { estimateSec: [1500, 3600] }
           };
           for (const stage of state.stages) {
@@ -1586,7 +1586,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
             }
           }
 
-          // Sanitise loop moved from Cooling Recirc to the end of the Boil (keeps its ticked state)
+          // Sanitise loop moved from Chill to the end of the Boil (keeps its ticked state)
           const boilStage = state.stages.find(s => s.id === 'BOIL');
           const chillStage = state.stages.find(s => s.id === 'COOLING_RECIRC');
           const sanitiseItem = chillStage?.checklist.find(c => c.id === 'hx-hot-sanitize');

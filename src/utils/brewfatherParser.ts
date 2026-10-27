@@ -403,7 +403,7 @@ export function buildCoolingRecircStage(
   return {
     id: 'COOLING_RECIRC',
     index: 6,
-    title: 'Cooling Recirc',
+    title: 'Chill',
     shortCode: 'CHILL',
     description: 'Recirculate hot wort to cool to 60°C before knockout transfer. Stopwatch tracks chill time.',
     isTimed: true,

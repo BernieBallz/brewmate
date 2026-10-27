@@ -171,7 +171,7 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
             </div>
           </div>
         ) : flow.kind === 'stopwatch' ? (
-          /* Case B: Stopwatch Stages (Sparge, Cooling Recirc, Knockout) - Full Card-Width Digits */
+          /* Case B: Stopwatch Stages (Sparge, Chill, Knockout) - Full Card-Width Digits */
           <div className="flex flex-col items-center w-full">
             <div
               className={`w-full text-center font-mono font-black tabular-nums leading-none transition-colors py-0.5 ${
