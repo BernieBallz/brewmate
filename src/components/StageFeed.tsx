@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS } from '../store/brewStore';
-import type { StageAddition, ChecklistItem, SessionMeasurements } from '../types/session';
-import { isEnzymeAddition } from '../utils/brewfatherParser';
+import type { StageAddition, ChecklistItem } from '../types/session';
+import { getMeasurementStepper as getMeasurementStepperFor } from '../utils/measurementSteppers';
+import { getAdditionBadge as getAdditionBadgeFor, getAdditionTypeInfo } from '../utils/additionDisplay';
+import { MeasurementStepper } from './MeasurementStepper';
+import { SessionLogPanel } from './SessionLogPanel';
 import {
   Check,
-  Leaf,
-  FlaskConical,
-  Pill,
-  Sparkles,
   Info,
   Undo2,
   X
@@ -21,25 +20,6 @@ const tabClass = (isActive: boolean): string =>
       : 'text-gray-400 hover:text-gray-200 border-transparent'
   }`;
 
-// A reminder that records a measured value (temperature, pH, gravity) with a -/+ stepper
-interface MeasurementStepper {
-  key: keyof SessionMeasurements;
-  label: string;
-  step: number;
-  stepLabel: string;
-  decimals: number;
-  suffix: string;
-  color: keyof typeof STEPPER_COLORS;
-  defaultValue: number;
-}
-
-const STEPPER_COLORS = {
-  amber: { button: 'text-amber-400', value: 'text-amber-300 border-amber-800/60' },
-  cyan: { button: 'text-cyan-400', value: 'text-cyan-300 border-cyan-800/60' },
-  emerald: { button: 'text-emerald-400', value: 'text-emerald-300 border-emerald-800/60' },
-  purple: { button: 'text-purple-400', value: 'text-purple-300 border-purple-800/60' }
-};
-
 export const StageFeed: React.FC = () => {
   const {
     stages,
@@ -52,7 +32,6 @@ export const StageFeed: React.FC = () => {
     timerStatus,
     timerRemainingSec,
     timerTotalSec,
-    auditLogs,
     recipe
   } = useBrewStore();
 
@@ -61,9 +40,6 @@ export const StageFeed: React.FC = () => {
   const currentStage = stages[currentStageIndex];
   const hasAdditions = currentStage.additions && currentStage.additions.length > 0;
   const boilTime = recipe?.boilTime || 60;
-  const lauterStage = stages.find(s => s.id === 'LAUTER_SPARGE');
-  const coolingStage = stages.find(s => s.id === 'COOLING_RECIRC');
-  const knockoutStage = stages.find(s => s.id === 'KNOCKOUT_TRANSFER');
 
   const activeRemainingSec =
     timerStatus === 'idle' && currentStage?.flowPhase !== 'finished'
@@ -102,136 +78,9 @@ export const StageFeed: React.FC = () => {
     scrollBodyRef.current?.scrollTo({ top: 0 });
   }, [currentStageIndex, activeTab]);
 
-  const updateMetric = (key: keyof SessionMeasurements, currentVal: number | undefined, delta: number, defaultVal: number) => {
-    const val = currentVal !== undefined ? currentVal : defaultVal;
-    const newVal = Math.round((val + delta) * 1000) / 1000;
-    setMeasurement(key, newVal);
-  };
+  const getMeasurementStepper = (checklistId: string) => getMeasurementStepperFor(checklistId, currentStage, recipe);
 
-  // Reminders that record a measured value with a -/+ stepper. Recording a value ticks the reminder
-  // (see setMeasurement) and it appears in the session log, report and exports.
-  const getMeasurementStepper = (checklistId: string): MeasurementStepper | null => {
-    const stageTargetTemp = currentStage?.parameters?.targetTemp;
-    switch (checklistId) {
-      case 'strike-temp':
-        return { key: 'strikeTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
-          defaultValue: stageTargetTemp ?? 75 };
-      case 'mash-temp-init':
-        return { key: 'mashInTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
-          defaultValue: stageTargetTemp ?? recipe?.mash?.steps?.[0]?.stepTemp ?? 65 };
-      case 'mash-temp-stable':
-        return { key: 'mashRestTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
-          defaultValue: stageTargetTemp ?? recipe?.mash?.steps?.[0]?.stepTemp ?? 65 };
-      case 'ph-sample':
-        return { key: 'mashPhActual', label: 'Recorded pH:', step: 0.05, stepLabel: '0.05', decimals: 2, suffix: '', color: 'cyan',
-          defaultValue: 5.25 };
-      case 'preboil-sg':
-        return { key: 'preBoilGravityActual', label: 'Recorded SG:', step: 0.001, stepLabel: '1pt', decimals: 3, suffix: '', color: 'emerald',
-          defaultValue: recipe?.preBoilGravity || 1.039 };
-      case 'postboil-sg':
-        return { key: 'postBoilGravityActual', label: 'Recorded SG:', step: 0.001, stepLabel: '1pt', decimals: 3, suffix: '', color: 'purple',
-          defaultValue: recipe?.og || 1.045 };
-      default:
-        return null;
-    }
-  };
-
-  // Stage-aware addition badge label & styling
-  const getAdditionBadge = (addition: StageAddition) => {
-    const stageId = currentStage.id;
-    if (stageId === 'BOIL') {
-      if (addition.triggerTimeMin >= boilTime) {
-        return { label: `START`, bg: 'bg-emerald-950 text-emerald-300 border-emerald-800' };
-      }
-      if (addition.triggerTimeMin === 0) {
-        return { label: 'FLAMEOUT', bg: 'bg-red-950 text-red-300 border-red-800' };
-      }
-      return { label: `T-${addition.triggerTimeMin}m`, bg: 'bg-slate-800 text-amber-400 border-slate-700' };
-    }
-    if (stageId === 'WATER_PREP') {
-      return { label: 'TO LIQUOR', bg: 'bg-sky-950 text-sky-300 border-sky-800' };
-    }
-    if (stageId === 'LAUTER_SPARGE') {
-      return { label: 'TO SPARGE', bg: 'bg-sky-950 text-sky-300 border-sky-800' };
-    }
-    if (stageId === 'MASH_IN' || stageId === 'MASH_SCHEDULE') {
-      return { label: 'DOUGH-IN', bg: 'bg-amber-950 text-amber-300 border-amber-800' };
-    }
-    if (stageId === 'HOPSTAND_WHIRLPOOL') {
-      return { label: 'WHIRLPOOL', bg: 'bg-cyan-950 text-cyan-300 border-cyan-800' };
-    }
-    if (stageId === 'YEAST_PITCH') {
-      return { label: 'AT PITCH', bg: 'bg-purple-950 text-purple-300 border-purple-800' };
-    }
-    return {
-      label: addition.triggerTimeMin > 0 ? `T-${addition.triggerTimeMin}m` : 'ADDITION',
-      bg: 'bg-slate-800 text-amber-400 border-slate-700'
-    };
-  };
-
-  // Addition categorization helper for distinct visual scanning (Hops vs Finings vs Nutrients vs Sugars)
-  const getAdditionTypeInfo = (addition: StageAddition) => {
-    const isHop = addition.type === 'hop' || addition.name.toLowerCase().includes('hop');
-    if (isHop) {
-      return {
-        isHop: true,
-        tag: 'HOP',
-        icon: Leaf,
-        tagColor: 'bg-emerald-950 text-emerald-300 border-emerald-700/80',
-        amountColor: 'text-emerald-400',
-        borderAccent: 'border-l-4 border-l-emerald-400'
-      };
-    }
-    const nameLower = addition.name.toLowerCase();
-    if (nameLower.includes('protafloc') || nameLower.includes('whirlfloc') || nameLower.includes('finings')) {
-      return {
-        isHop: false,
-        tag: 'FINING',
-        icon: FlaskConical,
-        tagColor: 'bg-blue-950/80 text-blue-300 border-blue-800/80',
-        amountColor: 'text-blue-300',
-        borderAccent: 'border-l-4 border-l-blue-400'
-      };
-    }
-    if (nameLower.includes('nutrient') || nameLower.includes('yeastlife') || nameLower.includes('zinc')) {
-      return {
-        isHop: false,
-        tag: 'NUTRIENT',
-        icon: Pill,
-        tagColor: 'bg-purple-950/80 text-purple-300 border-purple-800/80',
-        amountColor: 'text-purple-300',
-        borderAccent: 'border-l-4 border-l-purple-400'
-      };
-    }
-    if (addition.type === 'sugar' || nameLower.includes('sugar') || nameLower.includes('dextrose')) {
-      return {
-        isHop: false,
-        tag: 'SUGAR',
-        icon: Sparkles,
-        tagColor: 'bg-amber-950/80 text-amber-300 border-amber-800/80',
-        amountColor: 'text-amber-300',
-        borderAccent: 'border-l-4 border-l-amber-400'
-      };
-    }
-    if (addition.type === 'enzyme' || isEnzymeAddition(addition.name)) {
-      return {
-        isHop: false,
-        tag: 'ENZYME',
-        icon: FlaskConical,
-        tagColor: 'bg-rose-950/80 text-rose-300 border-rose-800/80',
-        amountColor: 'text-rose-300',
-        borderAccent: 'border-l-4 border-l-rose-400'
-      };
-    }
-    return {
-      isHop: false,
-      tag: 'MISC',
-      icon: FlaskConical,
-      tagColor: 'bg-slate-800 text-gray-300 border-slate-700',
-      amountColor: 'text-amber-400',
-      borderAccent: 'border-l-4 border-l-slate-600'
-    };
-  };
+  const getAdditionBadge = (addition: StageAddition) => getAdditionBadgeFor(addition, currentStage.id, boilTime);
 
   const additionReminderIds = ADDITION_SUMMARY_CHECKLIST_IDS;
 
@@ -577,40 +426,12 @@ export const StageFeed: React.FC = () => {
 
                     {/* Full-Width Unclipped Stepper Row for Items with Measurement Steppers */}
                     {stepper && (
-                      <div
-                        className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 w-full px-0.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="text-[11px] font-mono uppercase tracking-wider text-gray-300 font-bold shrink-0">
-                          {stepper.label}
-                        </span>
-
-                        <div className="flex items-center space-x-1.5 shrink-0">
-                          {/* Stepper - */}
-                          <button
-                            type="button"
-                            onClick={() => updateMetric(stepper.key, measurements[stepper.key], -stepper.step, stepper.defaultValue)}
-                            className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-xs font-bold font-mono border border-slate-700 touch-press flex items-center justify-center ${STEPPER_COLORS[stepper.color].button}`}
-                            title="Decrease"
-                          >
-                            -{stepper.stepLabel}
-                          </button>
-
-                          {/* Value Display (Centered between - and + for ergonomic thumb stepping) */}
-                          <span className={`text-xs sm:text-sm font-black font-mono px-2.5 py-1 rounded-lg bg-slate-950 border min-w-[56px] text-center ${STEPPER_COLORS[stepper.color].value}`}>
-                            {(measurements[stepper.key] ?? stepper.defaultValue).toFixed(stepper.decimals)}{stepper.suffix}
-                          </span>
-
-                          {/* Stepper + */}
-                          <button
-                            type="button"
-                            onClick={() => updateMetric(stepper.key, measurements[stepper.key], stepper.step, stepper.defaultValue)}
-                            className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-xs font-bold font-mono border border-slate-700 touch-press flex items-center justify-center ${STEPPER_COLORS[stepper.color].button}`}
-                            title="Increase"
-                          >
-                            +{stepper.stepLabel}
-                          </button>
-                        </div>
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/80">
+                        <MeasurementStepper
+                          stepper={stepper}
+                          value={measurements[stepper.key]}
+                          onChange={(value) => setMeasurement(stepper.key, value)}
+                        />
                       </div>
                     )}
                   </div>
@@ -738,127 +559,7 @@ export const StageFeed: React.FC = () => {
         )}
 
         {/* 3. SESSION LOG TAB (THIRD) */}
-        {activeTab === 'log' && (
-          <div className="space-y-2">
-            {/* Summary Bar of Recorded Telemetry */}
-            <div className="bg-slate-950/80 p-2 rounded-lg border border-slate-800 shrink-0">
-              <span className="text-[10px] font-mono text-gray-400 font-bold uppercase block mb-1">
-                Recorded Telemetry Summary
-              </span>
-              <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Strike Temp</span>
-                  <span className="text-amber-400 font-bold">
-                    {measurements.strikeTempActual !== undefined
-                      ? `${measurements.strikeTempActual.toFixed(1)}°C`
-                      : `${(stages.find(s => s.id === 'WATER_PREP')?.parameters.targetTemp ?? 71.5).toFixed(1)}°C (target)`}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Mash In Temp</span>
-                  <span className="text-amber-400 font-bold">
-                    {measurements.mashInTempActual !== undefined
-                      ? `${measurements.mashInTempActual.toFixed(1)}°C`
-                      : `${(recipe?.mash?.steps?.[0]?.stepTemp ?? 65).toFixed(1)}°C (target)`}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Mash Rest Temp</span>
-                  <span className="text-amber-400 font-bold">
-                    {measurements.mashRestTempActual !== undefined
-                      ? `${measurements.mashRestTempActual.toFixed(1)}°C`
-                      : `${(recipe?.mash?.steps?.[0]?.stepTemp ?? 65).toFixed(1)}°C (target)`}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Mash pH</span>
-                  <span className="text-cyan-400 font-bold">
-                    {measurements.mashPhActual !== undefined ? `${measurements.mashPhActual.toFixed(2)}` : '5.25 (target)'}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Pre-Boil SG</span>
-                  <span className="text-emerald-400 font-bold">
-                    {measurements.preBoilGravityActual !== undefined
-                      ? `${measurements.preBoilGravityActual.toFixed(3)}`
-                      : `${recipe?.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '1.039'}`}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Knockout SG</span>
-                  <span className="text-purple-400 font-bold">
-                    {measurements.postBoilGravityActual !== undefined
-                      ? `${measurements.postBoilGravityActual.toFixed(3)}`
-                      : `${recipe?.og ? recipe.og.toFixed(3) : '1.045'}`}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Lauter Time</span>
-                  <span className={lauterStage?.actualDurationSec !== undefined && lauterStage.actualDurationSec > 0 ? "text-emerald-400 font-bold" : "text-gray-500 font-bold"}>
-                    {lauterStage?.actualDurationSec !== undefined && lauterStage.actualDurationSec > 0
-                      ? `⏱️ ${Math.floor(lauterStage.actualDurationSec / 60)}m ${(lauterStage.actualDurationSec % 60).toString().padStart(2, '0')}s`
-                      : '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Chill Time (60°C)</span>
-                  <span className={coolingStage?.actualDurationSec !== undefined && coolingStage.actualDurationSec > 0 ? "text-emerald-400 font-bold" : "text-gray-500 font-bold"}>
-                    {coolingStage?.actualDurationSec !== undefined && coolingStage.actualDurationSec > 0
-                      ? `⏱️ ${Math.floor(coolingStage.actualDurationSec / 60)}m ${(coolingStage.actualDurationSec % 60).toString().padStart(2, '0')}s`
-                      : '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-                  <span className="text-gray-400">Knockout Time</span>
-                  <span className={knockoutStage?.actualDurationSec !== undefined && knockoutStage.actualDurationSec > 0 ? "text-emerald-400 font-bold" : "text-gray-500 font-bold"}>
-                    {knockoutStage?.actualDurationSec !== undefined && knockoutStage.actualDurationSec > 0
-                      ? `⏱️ ${Math.floor(knockoutStage.actualDurationSec / 60)}m ${(knockoutStage.actualDurationSec % 60).toString().padStart(2, '0')}s`
-                      : '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Live Activity Timeline */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono text-gray-400 font-bold uppercase block px-1">
-                Live Session Timeline ({auditLogs.length} events)
-              </span>
-              {auditLogs.length === 0 ? (
-                <div className="text-center py-6 text-gray-500 text-xs font-mono">
-                  No activity recorded yet.
-                </div>
-              ) : (
-                auditLogs.slice().reverse().map((log, idx) => (
-                  <div
-                    key={idx}
-                    className="p-1.5 rounded-lg bg-slate-950/70 border border-slate-800/80 text-xs font-mono flex items-start space-x-2"
-                  >
-                    <span className="text-[10px] text-gray-500 shrink-0 mt-0.5">
-                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <span className={`text-[10px] font-bold px-1 rounded mr-1.5 ${
-                        log.type === 'ADDITION_CONFIRMED'
-                          ? 'bg-emerald-950 text-emerald-400'
-                          : log.type === 'MEASUREMENT_RECORDED'
-                          ? 'bg-cyan-950 text-cyan-400'
-                          : log.type === 'STAGE_START' || log.type === 'STAGE_END'
-                          ? 'bg-amber-950 text-amber-400'
-                          : 'bg-slate-800 text-gray-300'
-                      }`}>
-                        {log.type.replace('_', ' ')}
-                      </span>
-                      <span className="text-gray-300 text-[11px] leading-snug">
-                        {log.message}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
+        {activeTab === 'log' && <SessionLogPanel />}
       </div>
 
       {/* Reminder Explanation Pop-up Dialog */}
