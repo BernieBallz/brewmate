@@ -97,7 +97,7 @@ describe('Brewfather Parser Regression Test', () => {
     expect(mashIn.checklist.map(c => c.id)).not.toContain('dough-in-flow');
 
     const mashSchedule = stages.find(s => s.id === 'MASH_SCHEDULE')!;
-    expect(mashSchedule.checklist.map(c => c.label)).toContain('Check mash temp 65°C');
+    expect(mashSchedule.checklist.map(c => c.id)).toEqual(['ph-sample', 'vorlauf-check']);
     expect(mashSchedule.checklist.map(c => c.id)).not.toContain('iodine-test');
 
     const boil = stages.find(s => s.id === 'BOIL')!;

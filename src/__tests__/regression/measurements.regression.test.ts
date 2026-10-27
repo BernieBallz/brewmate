@@ -64,16 +64,9 @@ describe('Temperature measurements (strike and mash-in)', () => {
     expect(markdown).toContain('**Mash In Temp**: 66.5 °C');
   });
 
-  it('records the Mash Rest temperature on its first reminder and exports it', () => {
+  it('has no separate mash temperature check on Mash Rest (Mash In records it)', () => {
     const mashRest = state().stages.find(s => s.id === 'MASH_SCHEDULE')!;
-    expect(mashRest.checklist[0].id).toBe('mash-temp-stable');
-
-    state().goToStage(2);
-    state().setMeasurement('mashRestTempActual', 66.5);
-    expect(checklistItem('MASH_SCHEDULE', 'mash-temp-stable')?.checked).toBe(true);
-
-    expect(generateTelemetryData(exportOptions()).measurements.mashRestTempActualC).toBe(66.5);
-    expect(generateCsvReport(exportOptions())).toContain('"Mash Rest Temp Actual (C)"');
-    expect(generateMarkdownReport(exportOptions())).toContain('**Mash Rest Temp**: 66.5 °C');
+    expect(mashRest.checklist.map(c => c.id)).not.toContain('mash-temp-stable');
+    expect(mashRest.checklist[0].id).toBe('ph-sample');
   });
 });

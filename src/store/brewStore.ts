@@ -1228,7 +1228,6 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         const metricToChecklistId: Partial<Record<keyof SessionMeasurements, string>> = {
           strikeTempActual: 'strike-temp',
           mashInTempActual: 'mash-temp-init',
-          mashRestTempActual: 'mash-temp-stable',
           mashPhActual: 'ph-sample',
           preBoilGravityActual: 'preboil-sg',
           postBoilGravityActual: 'postboil-sg'
@@ -1475,6 +1474,10 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           const mashRest = state.stages.find(s => s.id === 'MASH_SCHEDULE');
           if (mashRest && mashRest.flow?.startLabel === 'START MASH') {
             mashRest.flow.startLabel = 'START MASH REST';
+          }
+          // "Check mash temp" on Mash Rest repeated the Mash In temperature check, so it was removed
+          if (mashRest) {
+            mashRest.checklist = mashRest.checklist.filter(c => c.id !== 'mash-temp-stable');
           }
           if (mashIn && mashIn.flow?.nextLabel === 'NEXT: START MASH') {
             mashIn.flow.nextLabel = 'NEXT: START MASH REST';

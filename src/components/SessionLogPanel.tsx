@@ -37,14 +37,6 @@ export const SessionLogPanel: React.FC = () => {
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
-            <span className="text-gray-400">Mash Rest Temp</span>
-            <span className="text-amber-400 font-bold">
-              {measurements.mashRestTempActual !== undefined
-                ? `${measurements.mashRestTempActual.toFixed(1)}°C`
-                : `${(recipe?.mash?.steps?.[0]?.stepTemp ?? 65).toFixed(1)}°C (target)`}
-            </span>
-          </div>
-          <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
             <span className="text-gray-400">Mash pH</span>
             <span className="text-cyan-400 font-bold">
               {measurements.mashPhActual !== undefined ? `${measurements.mashPhActual.toFixed(2)}` : '5.25 (target)'}

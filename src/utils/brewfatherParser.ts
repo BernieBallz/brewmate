@@ -156,7 +156,6 @@ export function buildMashScheduleStage(
       completed: false
     })),
     checklist: [
-      { id: 'mash-temp-stable', label: `Check mash temp ${mashTemp}°C`, explanation: 'Verify temp rest mash step', checked: false },
       {
         id: 'ph-sample',
         label: 'pH check (~5.2)',

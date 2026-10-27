@@ -108,10 +108,10 @@ describe('Brew flow mode (Full step / By stage) regression tests', () => {
     it('records only the readings that were entered', () => {
       state().goToStage(MASH_REST_INDEX);
       state().setFlowMode('byStage');
-      state().confirmStageCard({ mashRestTempActual: 64.5 });
+      state().confirmStageCard({ mashPhActual: 5.3 });
 
-      expect(state().measurements).toEqual({ mashRestTempActual: 64.5 });
-      expect(state().stages[MASH_REST_INDEX].checklist.find(c => c.id === 'mash-temp-stable')?.checked).toBe(true);
+      expect(state().measurements).toEqual({ mashPhActual: 5.3 });
+      expect(state().stages[MASH_REST_INDEX].checklist.find(c => c.id === 'ph-sample')?.checked).toBe(true);
     });
 
     it('logs the confirmations as made on the stage card', () => {

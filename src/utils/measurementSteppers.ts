@@ -35,9 +35,6 @@ export const getMeasurementStepper = (
     case 'mash-temp-init':
       return { key: 'mashInTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
         defaultValue: stageTargetTemp ?? recipe?.mash?.steps?.[0]?.stepTemp ?? 65 };
-    case 'mash-temp-stable':
-      return { key: 'mashRestTempActual', label: 'Recorded temp:', step: 0.5, stepLabel: '0.5°', decimals: 1, suffix: '°C', color: 'amber',
-        defaultValue: stageTargetTemp ?? recipe?.mash?.steps?.[0]?.stepTemp ?? 65 };
     case 'ph-sample':
       return { key: 'mashPhActual', label: 'Recorded pH:', step: 0.05, stepLabel: '0.05', decimals: 2, suffix: '', color: 'cyan',
         defaultValue: 5.25 };
