@@ -67,7 +67,7 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
     ? 'Confirm'
     : flow.kind === 'confirm'
     ? (stage.id === 'CLEANUP' ? 'Confirm & finish' : 'Confirm & done')
-    : `Confirm & ${flow.startLabel.toLowerCase()}`;
+    : 'Confirm & start';
   const PrimaryIcon = isBeforeStart && flow.kind !== 'confirm' ? Play : CheckCircle2;
 
   const additionWhen = (addition: StageAddition): string => {
@@ -107,7 +107,7 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
       <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain flex flex-col gap-3 motion-safe:animate-stage-in">
         {stage.id === 'WATER_PREP' && (
           <div className="flex flex-col items-center py-1">
-            <StrikeOffsetControl size="large" />
+            <StrikeOffsetControl />
           </div>
         )}
 
@@ -232,7 +232,7 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
         <button
           type="button"
           onClick={handleConfirm}
-          className="w-full min-h-[64px] sm:min-h-[72px] py-3 rounded-xl font-mono font-black text-base sm:text-lg tracking-widest uppercase touch-press flex items-center justify-center space-x-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+          className="w-full min-h-[64px] sm:min-h-[72px] py-3 rounded-xl font-mono font-black text-base sm:text-lg tracking-widest uppercase touch-press flex items-center justify-center gap-2 border bg-emerald-950/80 hover:bg-emerald-900 active:bg-emerald-800 text-emerald-200 border-emerald-500/70 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
         >
           <PrimaryIcon className="w-5 h-5 text-emerald-400" />
           <span>{primaryLabel}</span>

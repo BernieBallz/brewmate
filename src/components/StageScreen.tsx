@@ -308,7 +308,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
             </p>
           </>
         ) : currentStage.id === 'WATER_PREP' ? (
-          <StrikeOffsetControl size="large" />
+          <StrikeOffsetControl />
         ) : (
           <div className="flex flex-col items-center max-w-sm">
             <CheckCircle2 className="w-12 h-12 text-emerald-400 mb-2" />
