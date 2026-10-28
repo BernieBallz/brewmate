@@ -12,7 +12,7 @@ import type {
   FlowMode,
   DueNotice
 } from '../types/session';
-import { parseBrewfatherRecipe, buildSpargeAdditions } from '../utils/brewfatherParser';
+import { parseBrewfatherRecipe, buildSpargeAdditions, wholeLitres } from '../utils/brewfatherParser';
 import { audioAlarm } from '../utils/audioAlarm';
 import { vibrate, VIBRATION_PATTERNS } from '../utils/vibration';
 import { wakeLockManager } from '../utils/wakeLock';
@@ -254,7 +254,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
               timestamp: Date.now(),
               stageId: firstStage.id,
               type: 'NOTE',
-              message: `Loaded recipe "${recipe.name}" (${recipe.batchSize}L)`
+              message: `Loaded recipe "${recipe.name}" (${wholeLitres(recipe.batchSize)}L)`
             }
           ],
           timerStatus: 'idle',
@@ -1447,6 +1447,19 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
         // Migrate any legacy stage labels if present in persisted state
         if (state.stages && state.stages.length > 0) {
+          // Water volumes are shown in whole litres (rounded up): tidy labels, pills and notes saved with decimals
+          const roundLitresInText = (text: string) => text.replace(/(d+.d+)L/g, (_, litres: string) => `${wholeLitres(Number(litres))}L`);
+          for (const stage of state.stages) {
+            if (stage.parameters.targetVolume !== undefined) {
+              stage.parameters.targetVolume = wholeLitres(stage.parameters.targetVolume);
+            }
+            if (stage.parameters.infoNotes) {
+              stage.parameters.infoNotes = roundLitresInText(stage.parameters.infoNotes);
+            }
+            for (const item of stage.checklist) {
+              item.label = roundLitresInText(item.label);
+            }
+          }
           // The Chill stage's id was COOLING_RECIRC (also on its log entries)
           for (const stage of state.stages) {
             if ((stage.id as string) === 'COOLING_RECIRC') stage.id = 'CHILL';

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBrewStore } from '../store/brewStore';
+import { wholeLitres } from '../utils/brewfatherParser';
 import { 
   FileText, 
   Download, 
@@ -124,7 +125,7 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
                 )}
               </div>
               <span className="text-xs text-gray-400 font-mono">
-                {recipe?.name} • {recipe?.batchSize}L • {dateStr} • Brew Day: {lengthOfBrewDayFormatted}
+                {recipe?.name} • {wholeLitres(recipe?.batchSize ?? 0)}L • {dateStr} • Brew Day: {lengthOfBrewDayFormatted}
               </span>
             </div>
           </div>

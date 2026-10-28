@@ -1,5 +1,6 @@
 import type { BrewfatherRecipe } from '../types/brewfather';
 import type { BrewStage, FlowMode, SessionAuditLogItem, SessionMeasurements } from '../types/session';
+import { wholeLitres } from './brewfatherParser';
 
 export interface TelemetryExportOptions {
   recipe: BrewfatherRecipe | null;
@@ -360,7 +361,7 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
     : 'In Progress';
 
   const lines: string[] = [];
-  lines.push(`# BREW DAY AUDIT REPORT: ${recipe?.name || 'Batch'} (${recipe?.batchSize || 0}L)`);
+  lines.push(`# BREW DAY AUDIT REPORT: ${recipe?.name || 'Batch'} (${wholeLitres(recipe?.batchSize || 0)}L)`);
   lines.push(`**Brew Session Date**: ${dateStr}`);
   lines.push(
     `**Length of Brew Day**: ${lengthOfBrewDayFormatted} (Sum of stage times: ${formatHourMinSec(

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBrewfatherRecipe } from '../../utils/brewfatherParser';
+import { parseBrewfatherRecipe, wholeLitres } from '../../utils/brewfatherParser';
 import testRecipe from '../fixtures/testRecipe.json';
 import type { BrewfatherRecipe } from '../../types/brewfather';
 
@@ -184,5 +184,18 @@ describe('Brewfather Parser Regression Test', () => {
     const plain = parseBrewfatherRecipe(untreated).find(s => s.id === 'LAUTER_SPARGE')!;
     expect(plain.additions).toEqual([]);
     expect(plain.checklist.map(c => c.id)).not.toContain('sparge-additions');
+  });
+
+  it('shows water volumes in whole litres, rounded up', () => {
+    expect(wholeLitres(212.48)).toBe(213);
+    expect(wholeLitres(123.68)).toBe(124);
+    expect(wholeLitres(50)).toBe(50);
+
+    const stages = parseBrewfatherRecipe(testRecipe as unknown as BrewfatherRecipe);
+    const strike = stages.find(s => s.id === 'WATER_PREP')!;
+    expect(strike.checklist.find(c => c.id === 'strike-sparge-vol')?.label).toBe('Liquor 32L / 21L');
+    const sparge = stages.find(s => s.id === 'LAUTER_SPARGE')!;
+    expect(sparge.checklist.find(c => c.id === 'preboil-vol')?.label).toBe('Pre-boil volume 45L');
+    expect(sparge.parameters.targetVolume).toBe(45);
   });
 });

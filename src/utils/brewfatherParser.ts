@@ -30,8 +30,8 @@ export function buildWaterPrepStage(
   strikeOffset: number,
   strikeAdditions: StageAddition[] = []
 ): BrewStage {
-  const strikeWater = recipe.data?.strikeWaterAmount || recipe.water?.mashAdjustments?.volume || 0;
-  const spargeWater = recipe.data?.spargeWaterAmount || recipe.water?.spargeAdjustments?.volume || 0;
+  const strikeWater = wholeLitres(recipe.data?.strikeWaterAmount || recipe.water?.mashAdjustments?.volume || 0);
+  const spargeWater = wholeLitres(recipe.data?.spargeWaterAmount || recipe.water?.spargeAdjustments?.volume || 0);
   const targetStrikeTemp = Number((mashTemp + strikeOffset).toFixed(1));
 
   const flow: FlowStep = {
@@ -107,9 +107,9 @@ export function buildMashInStage(
     ],
     parameters: {
       targetTemp: mashTemp,
-      targetVolume: recipe.data?.mashVolume || 0,
+      targetVolume: wholeLitres(recipe.data?.mashVolume || 0),
       volumeLabel: 'MASH VOL',
-      infoNotes: `Total mash volume (strike liquor + grain displacement): ${recipe.data?.mashVolume || 0}L`
+      infoNotes: `Total mash volume (strike liquor + grain displacement): ${wholeLitres(recipe.data?.mashVolume || 0)}L`
     }
   };
 }
@@ -187,6 +187,10 @@ export function buildMashScheduleStage(
 }
 
 // Brewfather's water-tool salt keys, named the way brewers know them
+// Water volumes are shown in whole litres, rounded up: decimals are more precise than a brewery can measure,
+// and rounding up never leaves you short (212.48 L -> 213 L)
+export const wholeLitres = (litres: number): number => Math.ceil(Math.round(litres * 1000) / 1000);
+
 const WATER_SALT_NAMES: Record<string, string> = {
   calciumChloride: 'Calcium Chloride (CaCl2)',
   calciumSulfate: 'Gypsum (CaSO4)',
@@ -248,7 +252,7 @@ export function buildLauterSpargeStage(
   spargeAdditions: StageAddition[] = []
 ): BrewStage {
   const spargeTemp = recipe.equipment?.spargeTemperature || 80;
-  const boilVol = recipe.boilSize || 267;
+  const boilVol = wholeLitres(recipe.boilSize || 267);
   const preBoilSg = recipe.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '1.039';
 
   const flow: FlowStep = {
@@ -429,7 +433,7 @@ export function buildKnockoutTransferStage(
   recipe: BrewfatherRecipe
 ): BrewStage {
   const exitTemp = recipe.primaryTemp || 19;
-  const batchVol = recipe.batchSize || 0;
+  const batchVol = wholeLitres(recipe.batchSize || 0);
 
   const flow: FlowStep = {
     id: 'knockout-transfer-flow',
@@ -553,7 +557,7 @@ export function parseBrewfatherRecipe(
   const mashSteps = recipe.mash?.steps || [{ name: 'Single Infusion', stepTemp: 65, stepTime: 60 }];
   const totalMashTime = mashSteps.reduce((acc, step) => acc + (step.stepTime || 0), 0);
   const mashTemp = mashSteps[0]?.stepTemp || 65;
-  const spargeWater = recipe.data?.spargeWaterAmount || recipe.water?.spargeAdjustments?.volume || 0;
+  const spargeWater = wholeLitres(recipe.data?.spargeWaterAmount || recipe.water?.spargeAdjustments?.volume || 0);
 
   // Hopstand / Whirlpool time & temperature from JSON
   const rawHopStandMinutes = (recipe as any).hopStandMinutes ?? (recipe as any).hopstandMinutes ?? 0;

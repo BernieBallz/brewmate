@@ -19,6 +19,7 @@ import {
   SkipForward
 } from 'lucide-react';
 import type { FlowMode } from '../types/session';
+import { wholeLitres } from '../utils/brewfatherParser';
 import { appLifecycle, type UpdateCheckResult } from '../utils/appLifecycle';
 import { useAppUpdateReady, useCanInstallApp } from '../hooks/useAppLifecycle';
 
@@ -92,7 +93,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
         <div className="flex items-center justify-between pb-2.5 border-b border-slate-800 shrink-0">
           <div>
             <span className="font-mono font-bold text-sm text-gray-100 uppercase tracking-wider block">Session Controls</span>
-            <span className="text-[10px] text-gray-400 font-mono">{recipe?.name} • {recipe?.batchSize}L</span>
+            <span className="text-[10px] text-gray-400 font-mono">{recipe?.name} • {wholeLitres(recipe?.batchSize ?? 0)}L</span>
           </div>
           <button
             onClick={onClose}
