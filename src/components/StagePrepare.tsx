@@ -3,7 +3,9 @@ import {
   useBrewStore,
   getUnconfirmedAdditions,
   getStageCardReminders,
-  getPendingEndReadings
+  getPendingEndReadings,
+  ADDITION_SUMMARY_CHECKLIST_IDS,
+  DONE_CARD_READING_IDS
 } from '../store/brewStore';
 import type { SessionMeasurements, StageAddition } from '../types/session';
 import { getMeasurementStepper } from '../utils/measurementSteppers';
@@ -11,7 +13,7 @@ import { getAdditionBadge, getAdditionTypeInfo } from '../utils/additionDisplay'
 import { getStageFlow, formatTime } from '../hooks/useStageTimerView';
 import { MeasurementStepper } from './MeasurementStepper';
 import { StrikeOffsetControl } from './StrikeOffsetControl';
-import { AlertTriangle, CheckCircle2, ChevronDown, Clock, Play, Timer } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock, Play, Timer } from 'lucide-react';
 
 interface StagePrepareProps {
   onConfirmAdvance: () => void;
@@ -42,10 +44,20 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
 
   const flow = getStageFlow(stage);
   const boilTime = recipe?.boilTime || 60;
-  const additions = [...getUnconfirmedAdditions(stage)].sort((a, b) => b.triggerRemainingSec - a.triggerRemainingSec);
+  // Confirm stages (Strike Water, Mash In, Yeast Pitch, Clean Up) always open on this screen, also when going
+  // back to one, so they list items already done as well, ticked
+  const listDone = flow.kind === 'confirm';
+  const additions = [...(listDone ? stage.additions : getUnconfirmedAdditions(stage))]
+    .sort((a, b) => b.triggerRemainingSec - a.triggerRemainingSec);
   const cardReminders = getStageCardReminders(stage);
   const readingItems = cardReminders.filter(c => getMeasurementStepper(c.id, stage, recipe) !== null);
-  const reminders = cardReminders.filter(c => getMeasurementStepper(c.id, stage, recipe) === null);
+  const reminders = (listDone
+    ? stage.checklist.filter(c =>
+        !DONE_CARD_READING_IDS.includes(c.id) &&
+        !(stage.additions.length > 0 && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)) &&
+        (c.checked || cardReminders.includes(c)))
+    : cardReminders
+  ).filter(c => getMeasurementStepper(c.id, stage, recipe) === null);
   const laterReadings = getPendingEndReadings(stage);
 
   // Switched to By stage mid-stage: confirm only, the timer is already going
@@ -111,6 +123,11 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
           </div>
         )}
 
+        {/* A stage with nothing to list (e.g. Yeast Pitch) says what it is for instead */}
+        {additions.length === 0 && reminders.length === 0 && readingItems.length === 0 && stage.description && (
+          <p className="text-sm text-gray-300 leading-snug px-1">{stage.description}</p>
+        )}
+
         {additions.length > 0 && (
           <section>
             <h2 className={sectionLabel}>Additions</h2>
@@ -122,8 +139,11 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
                     <span className="shrink-0 w-[4.5rem] text-[11px] font-mono font-bold uppercase text-cyan-300">
                       {additionWhen(addition)}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-gray-100 font-semibold">{addition.name}</span>
-                    <span className={`shrink-0 font-mono font-black ${typeInfo.amountColor}`}>
+                    <span className={`min-w-0 flex-1 truncate font-semibold ${addition.confirmed ? 'text-gray-500 line-through' : 'text-gray-100'}`}>
+                      {addition.name}
+                    </span>
+                    {addition.confirmed && <Check className="w-4 h-4 shrink-0 text-emerald-500" />}
+                    <span className={`shrink-0 font-mono font-black ${addition.confirmed ? 'text-gray-500' : typeInfo.amountColor}`}>
                       {addition.amount} {addition.unit || 'g'}
                     </span>
                   </li>
@@ -149,8 +169,10 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
                       disabled={!item.explanation}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-gray-100 touch-press"
                     >
-                      <span className="w-4 h-4 shrink-0 rounded-full border border-slate-600" />
-                      <span className="min-w-0 flex-1 font-semibold">{item.label}</span>
+                      {item.checked
+                        ? <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                        : <span className="w-4 h-4 shrink-0 rounded-full border border-slate-600" />}
+                      <span className={`min-w-0 flex-1 font-semibold ${item.checked ? 'text-gray-500 line-through' : ''}`}>{item.label}</span>
                       {item.triggerRemainingSec !== undefined && (
                         <span className="shrink-0 text-[11px] font-mono font-bold text-cyan-300">
                           Alert @ {Math.round(item.triggerRemainingSec / 60)}m left

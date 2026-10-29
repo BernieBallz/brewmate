@@ -5,7 +5,6 @@ import { getAdditionBadge } from '../utils/additionDisplay';
 import { getReadingShortName } from '../utils/measurementSteppers';
 import { CountdownProgressBar } from './CountdownProgressBar';
 import { StageActions } from './StageActions';
-import { StrikeOffsetControl } from './StrikeOffsetControl';
 import { StagePrepare } from './StagePrepare';
 import { useFullscreen } from '../hooks/useFullscreen';
 import { useAppUpdateReady } from '../hooks/useAppLifecycle';
@@ -88,8 +87,9 @@ export const StageScreen: React.FC<StageScreenProps> = ({
   const boilTime = recipe?.boilTime || 60;
   const isCountdown = flow.kind === 'countdown';
 
-  // Prepare state: the stage still has items to confirm, so the screen shows its checklist instead of the timer
-  const isPreparing = !isSessionDone && hasStageCardItems(currentStage);
+  // Prepare state: the stage still has items to confirm, so the screen shows its checklist instead of the timer.
+  // Confirm stages have no timer to show, so they always use it and look alike.
+  const isPreparing = !isSessionDone && (flow.kind === 'confirm' || hasStageCardItems(currentStage));
 
   // Stage plan: timed additions and prompts for countdown stages; otherwise the stage's additions and reminders
   const timedWhen = (sec: number) => sec >= currentStage.plannedDurationSec
@@ -307,14 +307,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
                 : `Stopwatch · est ${Math.round(currentStage.plannedDurationSec / 60)}m`}
             </p>
           </>
-        ) : currentStage.id === 'WATER_PREP' ? (
-          <StrikeOffsetControl />
-        ) : (
-          <div className="flex flex-col items-center max-w-sm">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400 mb-2" />
-            <p className="text-sm text-gray-300 leading-snug">{currentStage.description}</p>
-          </div>
-        )}
+        ) : null}
       </div>
 
       {/* Stage plan (read-only) */}
