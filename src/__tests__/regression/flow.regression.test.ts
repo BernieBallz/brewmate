@@ -27,6 +27,18 @@ describe('Flow State Machine & Grainfather Track Regression Suite', () => {
     expect(useBrewStore.getState().stages[2].flow.startLabel).toBe('START MASH REST');
   });
 
+  it('records the strike temp control value as the strike temp when Strike Water is confirmed', () => {
+    useBrewStore.getState().setStrikeOffset(useBrewStore.getState().strikeOffset + 0.5);
+    const target = useBrewStore.getState().stages[0].parameters.targetTemp;
+
+    useBrewStore.getState().confirmFlowStage();
+
+    const state = useBrewStore.getState();
+    expect(state.measurements.strikeTempActual).toBe(target);
+    expect(state.stages[0].checklist.find(c => c.id === 'strike-temp')?.checked).toBe(true);
+    expect(state.currentStageIndex).toBe(1);
+  });
+
   it('runs stopwatch stages and stores elapsed duration on stopStopwatch', () => {
     // Jump to LAUTER_SPARGE (stage 3)
     useBrewStore.getState().goToStage(3);

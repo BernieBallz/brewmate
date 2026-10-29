@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS } from '../store/brewStore';
+import { useBrewStore, ADDITION_SUMMARY_CHECKLIST_IDS, isStrikeControlReading } from '../store/brewStore';
 import type { StageAddition, ChecklistItem } from '../types/session';
 import { getMeasurementStepper as getMeasurementStepperFor } from '../utils/measurementSteppers';
 import { getAdditionBadge as getAdditionBadgeFor, getAdditionTypeInfo } from '../utils/additionDisplay';
@@ -80,6 +80,9 @@ export const StageFeed: React.FC = () => {
 
   const getMeasurementStepper = (checklistId: string) => getMeasurementStepperFor(checklistId, currentStage, recipe);
 
+  // Strike Water's strike temp is recorded from the strike control on DONE, so its reading item is not listed
+  const checklist = currentStage.checklist.filter(c => !isStrikeControlReading(currentStage, c.id));
+
   const getAdditionBadge = (addition: StageAddition) => getAdditionBadgeFor(addition, currentStage.id, boilTime);
 
   const additionReminderIds = ADDITION_SUMMARY_CHECKLIST_IDS;
@@ -96,7 +99,7 @@ export const StageFeed: React.FC = () => {
           >
             Reminders
             <span className="ml-1 font-mono text-[10px] text-gray-500">
-              {currentStage.checklist.filter(c => c.checked).length}/{currentStage.checklist.length}
+              {checklist.filter(c => c.checked).length}/{checklist.length}
             </span>
           </button>
 
@@ -158,7 +161,7 @@ export const StageFeed: React.FC = () => {
               };
 
               // First actionable item that is not yet completed
-              const firstActionableId = currentStage.checklist.find(
+              const firstActionableId = checklist.find(
                 c =>
                   !isChecklistItemDone(c) &&
                   (c.triggerRemainingSec === undefined ||
@@ -166,7 +169,7 @@ export const StageFeed: React.FC = () => {
                       activeRemainingSec <= c.triggerRemainingSec))
               )?.id;
 
-              return currentStage.checklist.map((item) => {
+              return checklist.map((item) => {
                 const stepper = getMeasurementStepper(item.id);
                 const hasStepper = stepper !== null;
                 const isAdditionLinkItem = additionReminderIds.includes(item.id) && hasAdditions;

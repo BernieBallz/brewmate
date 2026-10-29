@@ -90,8 +90,15 @@ export const getUnconfirmedAdditions = (stage: BrewStage | undefined): StageAddi
 // additions list already covers them); without additions they are ordinary manual reminders.
 export const getUncheckedReminders = (stage: BrewStage | undefined): ChecklistItem[] => {
   const hasAdditions = (stage?.additions?.length ?? 0) > 0;
-  return stage?.checklist?.filter(c => !c.checked && !(hasAdditions && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id))) ?? [];
+  return stage?.checklist?.filter(c =>
+    !c.checked && !(hasAdditions && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)) && !isStrikeControlReading(stage, c.id)
+  ) ?? [];
 };
+
+// Strike Water's strike temp control is also its strike temp reading (recorded when the stage is confirmed),
+// so the "Strike temp" checklist item is neither shown nor asked for separately
+export const isStrikeControlReading = (stage: BrewStage | undefined, checklistId: string): boolean =>
+  stage?.id === 'WATER_PREP' && checklistId === 'strike-temp';
 
 // True when leaving the stage now would leave additions unconfirmed or reminders unticked
 export const hasIncompleteStageItems = (stage: BrewStage | undefined): boolean =>
@@ -483,6 +490,12 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       },
 
       confirmFlowStage: () => {
+        // Strike Water: the strike temp control's value is the recorded strike temp
+        const confirmingStage = get().stages[get().currentStageIndex];
+        if (confirmingStage?.id === 'WATER_PREP' && confirmingStage.parameters.targetTemp !== undefined) {
+          get().setMeasurement('strikeTempActual', confirmingStage.parameters.targetTemp);
+        }
+
         const state = get();
         const currentStage = state.stages[state.currentStageIndex];
         const now = Date.now();

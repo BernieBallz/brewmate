@@ -94,7 +94,9 @@ describe('Alert snooze, undo and advance guard regression tests', () => {
     expect(strike().additions.length).toBeGreaterThan(0);
     // "Water salts" summarises the additions, so it is not listed as a reminder of its own
     expect(getUncheckedReminders(strike()).map(c => c.id)).not.toContain('water-treat');
-    expect(getUncheckedReminders(strike()).length).toBe(strike().checklist.length - 1);
+    // Nor is "Strike temp": the strike temp control records it when the stage is confirmed
+    expect(getUncheckedReminders(strike()).map(c => c.id)).not.toContain('strike-temp');
+    expect(getUncheckedReminders(strike()).length).toBe(strike().checklist.length - 2);
     expect(hasIncompleteStageItems(strike())).toBe(true);
 
     for (const item of strike().checklist.filter(c => c.id !== 'water-treat')) {
