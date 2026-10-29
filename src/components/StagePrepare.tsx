@@ -49,12 +49,15 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
   const listDone = flow.kind === 'confirm';
   const additions = [...(listDone ? stage.additions : getUnconfirmedAdditions(stage))]
     .sort((a, b) => b.triggerRemainingSec - a.triggerRemainingSec);
-  const cardReminders = getStageCardReminders(stage);
+  // Strike Water's strike temp control is the strike temp reading, so its separate reading is left out
+  const isStrikeReading = (id: string) => stage.id === 'WATER_PREP' && id === 'strike-temp';
+  const cardReminders = getStageCardReminders(stage).filter(c => !isStrikeReading(c.id));
   const readingItems = cardReminders.filter(c => getMeasurementStepper(c.id, stage, recipe) !== null);
   const reminders = (listDone
     ? stage.checklist.filter(c =>
         !DONE_CARD_READING_IDS.includes(c.id) &&
         !(stage.additions.length > 0 && ADDITION_SUMMARY_CHECKLIST_IDS.includes(c.id)) &&
+        !isStrikeReading(c.id) &&
         (c.checked || cardReminders.includes(c)))
     : cardReminders
   ).filter(c => getMeasurementStepper(c.id, stage, recipe) === null);
@@ -90,7 +93,10 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
   };
 
   const handleConfirm = () => {
-    confirmStageCard(readings);
+    const strikeTemp = stage.parameters.targetTemp;
+    confirmStageCard(stage.id === 'WATER_PREP' && strikeTemp !== undefined
+      ? { ...readings, strikeTempActual: strikeTemp }
+      : readings);
     if (isBeforeStart) {
       if (flow.kind === 'confirm') {
         confirmFlowStage();
