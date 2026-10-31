@@ -67,7 +67,7 @@ export const StageActions: React.FC<StageActionsProps> = ({
           className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-wider uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-[0_0_25px_rgba(245,158,11,0.4)]`}
         >
           <FileText className="w-5 h-5 stroke-[2.5]" />
-          <span>VIEW AUDIT & TELEMETRY</span>
+          <span>VIEW SESSION REPORT</span>
         </button>
       ) : flow.kind === 'confirm' ? (
         /* Case 1: Confirm Stages (Single dominant button) */

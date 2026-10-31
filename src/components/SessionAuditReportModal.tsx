@@ -103,19 +103,19 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-      <div className="w-full max-w-5xl bg-slate-950/95 backdrop-blur-xl border border-slate-800 shadow-[0_0_40px_rgba(15,23,42,0.9)] rounded-2xl p-3 sm:p-5 overflow-hidden flex flex-col max-h-[94vh]">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[94dvh] bg-slate-950/95 backdrop-blur-xl sm:border border-slate-800 shadow-[0_0_40px_rgba(15,23,42,0.9)] sm:rounded-2xl px-3 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:p-5 overflow-hidden flex flex-col">
+
+        {/* Header: on a phone the tabs drop to their own row so the close button always fits */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-2 pb-3 border-b border-slate-800 shrink-0">
+          <div className="flex-1 sm:flex-initial min-w-0 flex items-center space-x-2.5">
+            <div className="shrink-0 p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
               <FileText className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <h3 className="text-sm sm:text-base font-black text-white font-mono uppercase tracking-wider leading-tight">
-                  Session Audit & Telemetry Export
+                  Session Report
                 </h3>
                 {isComplete && (
                   <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono font-bold">
@@ -124,44 +124,44 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
                   </span>
                 )}
               </div>
-              <span className="text-xs text-gray-400 font-mono">
+              <span className="block text-xs text-gray-400 font-mono break-words">
                 {recipe?.name} • {wholeLitres(recipe?.batchSize ?? 0)}L • {dateStr} • Brew Day: {lengthOfBrewDayFormatted}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* View Switcher Tabs */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
-              <button
-                onClick={() => setActiveTab('summary')}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-mono font-bold transition-all ${
-                  activeTab === 'summary'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                <Table className="w-3.5 h-3.5" />
-                <span>Audit</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('json')}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-mono font-bold transition-all ${
-                  activeTab === 'json'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                <Code2 className="w-3.5 h-3.5" />
-                <span>Telemetry JSON</span>
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close session report"
+            className="order-2 sm:order-3 shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
 
+          {/* View Switcher Tabs */}
+          <div className="order-3 sm:order-2 sm:ml-auto w-full sm:w-auto grid grid-cols-2 sm:flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
             <button
-              onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-all"
+              onClick={() => setActiveTab('summary')}
+              className={`flex items-center justify-center space-x-1 px-2.5 py-1.5 rounded text-xs font-mono font-bold whitespace-nowrap transition-colors ${
+                activeTab === 'summary'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-200 border border-transparent'
+              }`}
             >
-              <X className="w-5 h-5" />
+              <Table className="w-3.5 h-3.5" />
+              <span>Audit</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('json')}
+              className={`flex items-center justify-center space-x-1 px-2.5 py-1.5 rounded text-xs font-mono font-bold whitespace-nowrap transition-colors ${
+                activeTab === 'json'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-200 border border-transparent'
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              <span>Telemetry JSON</span>
             </button>
           </div>
         </div>
@@ -176,7 +176,7 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
                   Phase Timing Deltas (Planned vs Actual)
                 </span>
                 <div className="overflow-x-auto rounded-lg border border-slate-800">
-                  <table className="w-full text-left text-xs font-mono">
+                  <table className="w-full text-left text-xs font-mono whitespace-nowrap">
                     <thead className="bg-slate-950 text-gray-400 uppercase text-[10px] border-b border-slate-800">
                       <tr>
                         <th className="py-2 px-3">Stage</th>
@@ -339,11 +339,11 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
           ) : (
             // Telemetry JSON View
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-mono text-gray-400">
+              <div className="flex items-center justify-between gap-2 text-xs font-mono text-gray-400">
                 <span>Structured JSON ready for external tooling import:</span>
                 <button
                   onClick={() => handleCopy('json')}
-                  className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-slate-800 flex items-center space-x-1 font-bold"
+                  className="shrink-0 px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-slate-800 flex items-center space-x-1 font-bold"
                 >
                   {copiedType === 'json' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedType === 'json' ? 'Copied JSON!' : 'Copy Raw JSON'}</span>
@@ -357,12 +357,12 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
         </div>
 
         {/* Action Footer (Responsive Multi-Format Export) */}
-        <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
           {/* Quick Copy Pill Buttons */}
-          <div className="flex items-center space-x-2">
+          <div className="order-2 sm:order-1 grid grid-cols-2 sm:flex items-center gap-2">
             <button
               onClick={() => handleCopy('json')}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-cyan-800/50 font-mono font-bold text-xs tracking-wider uppercase transition-all touch-press"
+              className="min-h-[44px] sm:min-h-0 flex items-center justify-center space-x-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-cyan-800/50 font-mono font-bold text-xs sm:tracking-wider uppercase whitespace-nowrap transition-colors touch-press"
               title="Copy telemetry JSON to clipboard"
             >
               {copiedType === 'json' ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" /> : <Code2 className="w-3.5 h-3.5" />}
@@ -371,7 +371,7 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
 
             <button
               onClick={() => handleCopy('md')}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono font-bold text-xs tracking-wider uppercase transition-all touch-press"
+              className="min-h-[44px] sm:min-h-0 flex items-center justify-center space-x-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono font-bold text-xs sm:tracking-wider uppercase whitespace-nowrap transition-colors touch-press"
               title="Copy markdown report to clipboard"
             >
               {copiedType === 'md' ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
@@ -379,36 +379,39 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
             </button>
           </div>
 
-          {/* Download Buttons */}
-          <div className="flex items-center space-x-2">
+          {/* Download Buttons: short labels below desktop width so the footer always fits */}
+          <div className="order-1 sm:order-2 grid grid-cols-3 sm:flex items-center gap-2">
             {/* Download CSV */}
             <button
               onClick={handleDownloadCsv}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-800/50 font-mono font-bold text-xs tracking-wider uppercase transition-all touch-press"
+              className="min-h-[44px] sm:min-h-0 flex items-center justify-center space-x-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-800/50 font-mono font-bold text-xs sm:tracking-wider uppercase whitespace-nowrap transition-colors touch-press"
               title="Download CSV report"
+              aria-label="Download CSV report"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Download CSV</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+              <span><span className="hidden lg:inline">Download </span>CSV</span>
             </button>
 
             {/* Download Markdown */}
             <button
               onClick={handleDownloadMarkdown}
-              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono font-bold text-xs tracking-wider uppercase transition-all touch-press"
+              className="min-h-[44px] sm:min-h-0 flex items-center justify-center space-x-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono font-bold text-xs sm:tracking-wider uppercase whitespace-nowrap transition-colors touch-press"
               title="Download Markdown log file"
+              aria-label="Download Markdown log file"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>.MD Log</span>
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span>.MD<span className="hidden lg:inline"> Log</span></span>
             </button>
 
             {/* Primary Action: Download Telemetry JSON */}
             <button
               onClick={handleDownloadTelemetryJson}
-              className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-mono font-black text-xs tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] touch-press"
+              className="min-h-[44px] sm:min-h-0 flex items-center justify-center space-x-1.5 px-2 sm:px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-mono font-black text-xs sm:tracking-wider uppercase whitespace-nowrap transition-colors shadow-[0_0_20px_rgba(245,158,11,0.3)] touch-press"
               title="Download structured JSON telemetry file"
+              aria-label="Download structured JSON telemetry file"
             >
-              <Download className="w-4 h-4 stroke-[2.5]" />
-              <span>Download Telemetry JSON</span>
+              <Download className="w-4 h-4 shrink-0 stroke-[2.5]" />
+              <span><span className="hidden lg:inline">Download Telemetry </span>JSON</span>
             </button>
           </div>
         </div>
