@@ -2,8 +2,8 @@
 
 ## Two-Agent Local Setup
 This repository is developed by two AI assistants on this machine from separate checkouts:
-- **Antigravity (This agent)**: `c:\Users\barne\Documents\AG -BrewMate`
-- **Claude Code**: `c:\Users\barne\Documents\Claude Code\brewmate`
+- **Antigravity (This agent)**: `Documents\AG -BrewMate`
+- **Claude Code**: `Documents\Claude Code\brewmate`
 - **Remote Hub**: `https://github.com/BernieBallz/brewmate.git`
 
 Because both agents work on the same project in separate local directories, **all sync happens through Git / GitHub**.
@@ -32,7 +32,8 @@ Before starting any task, code change, testing, or analysis at the start of a se
    - Briefly state the current branch name, latest commit hash, and that the workspace is synchronized with remote before proceeding with the user's request.
 
 4. **Push Work When Finished**:
-   - Always push committed work to GitHub so the Claude checkout can pull it.
+   - Push committed work to GitHub so the Claude checkout can pull it.
+   - `dev-2` deploys straight to the production site (v1.0.0 shipped on 2026-11-01), so ask the user before pushing unless they've asked for that work to go live.
 
 ---
 

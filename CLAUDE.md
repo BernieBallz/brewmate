@@ -30,7 +30,9 @@ Run `npm test`, `npm run lint` and `npm run build` before considering a change d
 ## Git and deployment
 
 - `dev-2` is the only branch (default). History was reset on 2026-10-21 to remove personal recipe data; an offline backup of the old history exists on the user's PC only.
-- **Pushing to `dev-2` deploys to GitHub Pages** at https://bernieballz.github.io/brewmate/ (`.github/workflows/deploy.yml`; `main` deploys currently fail). The app is pre-release, so pushing finished, checked work to `dev-2` straight away is fine — the user tests on their phone from the live site. Revisit this once the first release ships.
+- **Pushing to `dev-2` deploys to GitHub Pages** at https://bernieballz.github.io/brewmate/ (`.github/workflows/deploy.yml`). This is also the production site: v1.0.0 shipped on 2026-11-01, and any push reaches real brew days. Ask the user before pushing, unless they've asked for that work to go live.
+- Releases: bump `version` in `package.json` (shown in the menu), add a `CHANGELOG.md` entry, and tag the commit `vX.Y.Z`.
+- Production has a Content Security Policy (`vite.config.ts`, build only), so the app can't load anything from another site. Test new features with `npm run build` and `vite preview`, not just the dev server.
 - The site is served from the `/brewmate/` sub-path: reference files in `public/` with `assetUrl()` (`src/utils/assetUrl.ts`) or relative paths, never `/file.png`.
 - Commit messages use Conventional Commits with a scope, e.g. `fix(feed): ...`, `feat(ui): ...`.
 - `base: './'` in `vite.config.ts` is required for Pages hosting; keep it.
