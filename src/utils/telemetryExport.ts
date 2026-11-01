@@ -341,6 +341,11 @@ export const generateCsvReport = (options: TelemetryExportOptions): string => {
   return rows.join('\r\n');
 };
 
+// Recipe text goes into the Markdown report as plain text: a name like ![x](http://evil.example/x.png) would
+// otherwise fetch a remote image when the report is viewed, and a | would break the tables
+export const escapeMarkdown = (value: unknown): string =>
+  String(value ?? '').replace(/[\\`|<>[\]]/g, '\\$&').replace(/\s*[\r\n]+\s*/g, ' ');
+
 export const generateMarkdownReport = (options: TelemetryExportOptions): string => {
   const { recipe, stages, measurements, auditLogs, sessionStartTime, sessionEndTime, finishedAt, flowMode = 'full' } = options;
   const isComplete = finishedAt !== null || (stages.length > 0 && stages[stages.length - 1].status === 'completed');
@@ -361,7 +366,7 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
     : 'In Progress';
 
   const lines: string[] = [];
-  lines.push(`# BREW DAY AUDIT REPORT: ${recipe?.name || 'Batch'} (${wholeLitres(recipe?.batchSize || 0)}L)`);
+  lines.push(`# BREW DAY AUDIT REPORT: ${escapeMarkdown(recipe?.name || 'Batch')} (${wholeLitres(recipe?.batchSize || 0)}L)`);
   lines.push(`**Brew Session Date**: ${dateStr}`);
   lines.push(
     `**Length of Brew Day**: ${lengthOfBrewDayFormatted} (Sum of stage times: ${formatHourMinSec(
@@ -369,8 +374,8 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
     )} | Wall-clock: ${formatHourMinSec(wallClockDurationSec)})`
   );
   lines.push(`**Session Start**: ${timeStr} | **Session End**: ${endTimeStr}`);
-  lines.push(`**Brewer**: ${recipe?.author || 'Lead Brewer'}`);
-  lines.push(`**Style**: ${recipe?.type || 'All Grain'} | **Target OG**: ${recipe?.og || 'N/A'}`);
+  lines.push(`**Brewer**: ${escapeMarkdown(recipe?.author || 'Lead Brewer')}`);
+  lines.push(`**Style**: ${escapeMarkdown(recipe?.type || 'All Grain')} | **Target OG**: ${recipe?.og || 'N/A'}`);
   lines.push(`**Status**: ${isComplete ? 'COMPLETED' : 'IN PROGRESS'}`);
   lines.push(`**Brew Flow**: ${FLOW_MODE_LABELS[flowMode]}`);
   lines.push('');
@@ -416,7 +421,7 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
   lines.push(
     `- **Mash pH (15m sample)**: ${
       measurements.mashPhActual !== undefined ? measurements.mashPhActual : 'Not recorded'
-    } (Target: 5.2 - 5.3)`
+    } (Target: 5.2 - 5.4)`
   );
   lines.push(
     `- **Pre-Boil Gravity**: ${
@@ -440,9 +445,7 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
   }
   const coolingStage = stages.find((s) => s.id === 'CHILL');
   if (coolingStage && coolingStage.actualDurationSec > 0) {
-    lines.push(
-      `- **Cooling & Recirc (Chill to 60°C) Duration**: ${formatDurationOnly(coolingStage.actualDurationSec)} (Stopwatch)`
-    );
+    lines.push(`- **Chill Time (60°C)**: ${formatDurationOnly(coolingStage.actualDurationSec)} (Stopwatch)`);
   }
   const knockoutStage = stages.find((s) => s.id === 'KNOCKOUT_TRANSFER');
   if (knockoutStage && knockoutStage.actualDurationSec > 0) {
@@ -452,18 +455,18 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
   lines.push('');
   lines.push('---');
   lines.push('## 3. INGREDIENT ADDITIONS CONFIRMATION LOG');
-  const allAdditions = stages.flatMap((s) => s.additions);
+  const allAdditions = stages.flatMap((s) => s.additions.map((a) => ({ ...a, stageId: s.id, stageTitle: s.title })));
   if (allAdditions.length > 0) {
     lines.push('| Addition | Stage | Target Time | Amount | Confirmed | Timestamp |');
     lines.push('| :--- | :--- | :--- | :--- | :--- | :--- |');
     allAdditions.forEach((a) => {
-      const timeTarget = a.triggerTimeMin === 0 ? 'Flameout' : `T-${a.triggerTimeMin}m`;
+      const timeTarget = a.triggerTimeMin > 0 ? `T-${a.triggerTimeMin}m` : a.stageId === 'BOIL' ? 'Flameout' : 'During stage';
       // By stage confirms additions upfront, so the time is when the stage started, not when it went in
       const timeLog = a.confirmedAt
         ? `${new Date(a.confirmedAt).toLocaleTimeString()}${a.confirmedVia === 'stage-card' ? ' (at stage start)' : ''}`
         : 'Pending';
       lines.push(
-        `| ${a.name} | ${a.type} | ${timeTarget} | ${a.amount} ${a.unit || 'g'} | ${
+        `| ${escapeMarkdown(a.name)} | ${a.stageTitle} | ${timeTarget} | ${a.amount} ${escapeMarkdown(a.unit || 'g')} | ${
           a.confirmed ? '✅ YES' : '❌ NO'
         } | ${timeLog} |`
       );
@@ -476,7 +479,7 @@ export const generateMarkdownReport = (options: TelemetryExportOptions): string 
   lines.push('---');
   lines.push('## 4. SESSION EVENT TRAIL');
   auditLogs.slice(-25).forEach((log) => {
-    lines.push(`- [${new Date(log.timestamp).toLocaleTimeString()}] **${log.type}**: ${log.message}`);
+    lines.push(`- [${new Date(log.timestamp).toLocaleTimeString()}] **${log.type}**: ${escapeMarkdown(log.message)}`);
   });
 
   lines.push('');

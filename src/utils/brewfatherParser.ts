@@ -67,7 +67,7 @@ export function buildWaterPrepStage(
       targetTemp: targetStrikeTemp,
       targetVolume: strikeWater,
       volumeLabel: 'STRIKE',
-      infoNotes: `Batch: ${recipe.name} (${recipe.batchSize}L)`
+      infoNotes: `Batch: ${recipe.name} (${wholeLitres(recipe.batchSize)}L)`
     }
   };
 }
@@ -226,8 +226,9 @@ export function buildSpargeAdditions(recipe: BrewfatherRecipe): StageAddition[] 
   const adjustments = recipe.water?.spargeAdjustments || {};
   const additions: StageAddition[] = [];
   Object.entries(adjustments).forEach(([key, value]) => {
-    // Only known salts: other numeric water-tool fields (volume, ion totals, pH…) are not things to add
-    const saltName = WATER_SALT_NAMES[key];
+    // Only known salts: other numeric water-tool fields (volume, ion totals, pH…) are not things to add.
+    // Own keys only, so a field called "constructor" isn't mistaken for a salt.
+    const saltName = Object.hasOwn(WATER_SALT_NAMES, key) ? WATER_SALT_NAMES[key] : undefined;
     if (!saltName || typeof value !== 'number' || value <= 0) return;
     additions.push({ ...base, id: `sparge-salt-${key}`, name: saltName, amount: roundAmount(value), unit: 'g', type: 'water' });
   });
@@ -252,8 +253,9 @@ export function buildLauterSpargeStage(
   spargeAdditions: StageAddition[] = []
 ): BrewStage {
   const spargeTemp = recipe.equipment?.spargeTemperature || 80;
-  const boilVol = wholeLitres(recipe.boilSize || 267);
-  const preBoilSg = recipe.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '1.039';
+  // A target the recipe doesn't give is left out rather than made up
+  const boilVol = wholeLitres(recipe.boilSize || 0);
+  const preBoilSg = recipe.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '';
 
   const flow: FlowStep = {
     id: 'lauter-sparge-flow',
@@ -288,15 +290,15 @@ export function buildLauterSpargeStage(
       { id: 'equal-flow', label: 'Even flow', explanation: 'Balance runoff rate with sparge inflow to prevent bed compaction', checked: false },
       { id: 'kettle-early-heat', label: 'Kettle heat on', explanation: 'Turn on small kettle element as soon as it is submerged', checked: false },
       { id: 'runoff-gravity-cutoff', label: 'Stop before 1.010', explanation: 'Test runnings gravity; halt sparge if below 1.010 to prevent tannin extraction', checked: false },
-      { id: 'preboil-vol', label: `Pre-boil volume ${boilVol}L`, explanation: 'Measure total volume collected in boil kettle before boil', checked: false },
-      { id: 'preboil-sg', label: `Pre-boil SG ${preBoilSg}`, explanation: 'Take sample and record pre-boil gravity', checked: false },
+      { id: 'preboil-vol', label: boilVol ? `Pre-boil volume ${boilVol}L` : 'Pre-boil volume', explanation: 'Measure total volume collected in boil kettle before boil', checked: false },
+      { id: 'preboil-sg', label: preBoilSg ? `Pre-boil SG ${preBoilSg}` : 'Pre-boil SG', explanation: 'Take sample and record pre-boil gravity', checked: false },
       { id: 'hot-break-ramp', label: 'Ramp to boil', explanation: 'Bring kettle to rolling boil; prepare defoamer to control hot-break foam', checked: false }
     ],
     parameters: {
       targetTemp: spargeTemp,
       targetVolume: boilVol,
       volumeLabel: 'PRE-BOIL',
-      targetGravity: recipe.preBoilGravity || 1.039,
+      targetGravity: recipe.preBoilGravity,
       infoNotes: `Sparge liquor: ${spargeWater ? `${spargeWater}L` : 'Per recipe'} at ${spargeTemp}°C`
     }
   };
@@ -470,7 +472,7 @@ export function buildKnockoutTransferStage(
       targetTemp: exitTemp,
       targetVolume: batchVol,
       volumeLabel: 'BATCH',
-      targetGravity: recipe.og || 1.0378,
+      targetGravity: recipe.og,
       infoNotes: `Fermenter target volume: ${batchVol}L`
     }
   };
@@ -554,7 +556,7 @@ export function parseBrewfatherRecipe(
   strikeOffset = 10
 ): BrewStage[] {
   const boilTime = recipe.boilTime || 60;
-  const mashSteps = recipe.mash?.steps || [{ name: 'Single Infusion', stepTemp: 65, stepTime: 60 }];
+  const mashSteps = recipe.mash?.steps?.length ? recipe.mash.steps : [{ name: 'Single Infusion', stepTemp: 65, stepTime: 60 }];
   const totalMashTime = mashSteps.reduce((acc, step) => acc + (step.stepTime || 0), 0);
   const mashTemp = mashSteps[0]?.stepTemp || 65;
   const spargeWater = wholeLitres(recipe.data?.spargeWaterAmount || recipe.water?.spargeAdjustments?.volume || 0);
@@ -578,9 +580,9 @@ export function parseBrewfatherRecipe(
 
   // Hops in boil
   (recipe.hops || [])
-    .filter(h => h.use === 'Boil' || h.use === 'First Wort')
+    .filter(h => h.use === 'Boil' || h.use === 'First Wort' || h.use === 'Flameout')
     .forEach((h, idx) => {
-      const time = h.use === 'First Wort' ? boilTime : (h.time ?? boilTime);
+      const time = h.use === 'First Wort' ? boilTime : h.use === 'Flameout' ? 0 : (h.time ?? boilTime);
       boilAdditions.push({
         id: `hop-boil-${idx}`,
         name: `${h.name} (${h.type || 'Hop'})`,
@@ -590,7 +592,7 @@ export function parseBrewfatherRecipe(
         triggerRemainingSec: time * 60,
         confirmed: false,
         type: 'hop',
-        notes: h.use === 'First Wort' ? 'First Wort Hop' : `${h.ibu ? `${h.ibu.toFixed(1)} IBU` : ''}`
+        notes: h.use === 'First Wort' ? 'First Wort Hop' : h.use === 'Flameout' ? 'Add at Flameout' : `${h.ibu ? `${h.ibu.toFixed(1)} IBU` : ''}`
       });
     });
 

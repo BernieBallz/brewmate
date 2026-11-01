@@ -244,7 +244,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       loadRecipe: (recipe: BrewfatherRecipe) => {
         notificationManager.clearLiveTimerNotification();
 
-        const offset = get().strikeOffset || 10;
+        const offset = get().strikeOffset ?? initialStrikeOffset;
         const parsedStages = parseBrewfatherRecipe(recipe, offset);
         const firstStage = parsedStages[0];
         set({
@@ -321,6 +321,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
       startTimer: () => {
         const state = get();
+        // A second tap while running must not restart the clock
+        if (state.timerStatus === 'running') return;
         const now = Date.now();
         const stage = state.stages[state.currentStageIndex];
 
@@ -332,7 +334,7 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         notificationManager.resetLiveTimerDismissal();
         notificationManager.requestPermission();
 
-        if (!state.wakeLockActive) {
+        if (!state.wakeLockActive || !wakeLockManager.isActive()) {
           wakeLockManager.requestLock().then((active) => {
             set({ wakeLockActive: active });
           });
@@ -373,6 +375,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         const additionalElapsed = Math.floor((now - state.timerStartedAtWallClock) / 1000);
         const totalElapsed = state.timerAccumulatedElapsedSec + additionalElapsed;
         const currentStage = state.stages[state.currentStageIndex];
+        // A finished countdown has nothing left to pause (e.g. a stale lock-screen button)
+        if (currentStage.flowPhase === 'finished') return;
         const remaining = currentStage.timerType === 'countdown'
           ? Math.max(0, state.timerTotalSec - totalElapsed)
           : totalElapsed;
@@ -541,8 +545,15 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
       finishBrew: () => {
         const state = get();
+        if (state.finishedAt !== null) return;
         const now = Date.now();
         const currentStage = state.stages[state.currentStageIndex];
+
+        // The brew is over: stop holding the screen on and clear any leftover timer notification
+        notificationManager.clearLiveTimerNotification();
+        if (state.wakeLockActive || wakeLockManager.isActive()) {
+          void wakeLockManager.releaseLock();
+        }
 
         const updatedStages = [...state.stages];
         const started = currentStage.startedAt || now;
@@ -561,7 +572,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           sessionStartTime: state.sessionStartTime || started,
           sessionEndTime: now,
           finishedAt: now,
-          timerStatus: 'idle'
+          timerStatus: 'idle',
+          wakeLockActive: false
         });
 
         if (state.audioEnabled) {
@@ -586,6 +598,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       extendTimer: (additionalSeconds: number) => {
         const state = get();
         const currentStage = state.stages[state.currentStageIndex];
+        // Only a started countdown can be extended (a stale lock-screen button may arrive after the stage moved on)
+        if (currentStage?.timerType !== 'countdown' || state.timerStatus === 'idle') return;
         const newRemaining = state.timerRemainingSec + additionalSeconds;
         const newTotal = state.timerTotalSec + additionalSeconds;
 
@@ -768,7 +782,8 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
               if (state.vibrationEnabled) {
                 vibrate(VIBRATION_PATTERNS.ADDITION_ALERT);
               }
-              const noticeId = [...newAdditions, ...newTasks].map(item => item.id).join('-');
+              const dueIds = [...newAdditions, ...newTasks].map(item => item.id);
+              const noticeId = dueIds.join('-');
               notificationManager.sendNotification(lines.join(' • '), {
                 body: `${currentStage.title} (${Math.max(0, Math.ceil(remaining / 60))}m remaining)`,
                 tag: 'due-' + noticeId
@@ -776,13 +791,14 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
               // Readings that come due (mash pH) get a Record button on the banner
               const readingIds = newTasks.filter(c => DONE_CARD_READING_IDS.includes(c.id)).map(c => c.id);
               activeDueNotice = { id: noticeId, title: currentStage.title, lines, ...(readingIds.length > 0 ? { readingIds } : {}) };
-              get().addAuditLog('NOTE', `Due: ${lines.join(', ')}`, { dueIds: noticeId.split('-'), remainingSec: Math.max(0, remaining) });
+              get().addAuditLog('NOTE', `Due: ${lines.join(', ')}`, { dueIds, remainingSec: Math.max(0, remaining) });
             }
           }
         }
 
-        // Check if countdown hit 0
-        const isCompletingNow = remaining <= 0 && state.timerRemainingSec > 0;
+        // Check if countdown hit 0. Goes by the stage's phase rather than the previous second, so a countdown
+        // that ran out while the app was closed (it reopens at 0) still alerts and records its time.
+        const isCompletingNow = remaining <= 0 && currentStage.flowPhase !== 'finished';
         let nextStages = state.stages;
 
         if (isCompletingNow) {
@@ -821,8 +837,9 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
             ...currentStage,
             flowPhase: 'finished',
             startedAt: startedAtTime,
-            endedAt: now,
-            actualDurationSec: totalElapsed
+            // When the countdown actually reached zero, even if the app only noticed later
+            endedAt: now + rawRemaining * 1000,
+            actualDurationSec: Math.min(totalElapsed, state.timerTotalSec)
           };
           nextStages = updatedStages;
         }
@@ -856,12 +873,13 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         if (state.audioEnabled) {
           audioAlarm.unlock();
         }
+        // "Keep screen on" is saved with the session, but the lock itself doesn't survive a reload
+        if ((state.timerStatus === 'running' || state.wakeLockActive) && !wakeLockManager.isActive()) {
+          wakeLockManager.requestLock().then((active) => {
+            set({ wakeLockActive: active });
+          });
+        }
         if (state.timerStatus === 'running') {
-          if (!wakeLockManager.isActive()) {
-            wakeLockManager.requestLock().then((active) => {
-              set({ wakeLockActive: active });
-            });
-          }
           get().tick();
         }
       },
@@ -869,37 +887,42 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       goToStage: (newIndex: number) => {
         const state = get();
         if (newIndex < 0 || newIndex >= state.stages.length) return;
+        // Already there: "moving" to the current stage must not reset its running timer
+        if (newIndex === state.currentStageIndex) return;
 
         notificationManager.clearLiveTimerNotification();
 
         const now = Date.now();
         const oldStage = state.stages[state.currentStageIndex];
         const nextStage = state.stages[newIndex];
+        const isGoingBack = newIndex < state.currentStageIndex;
 
         const updatedStages = [...state.stages];
         const startedOld = oldStage.startedAt || state.sessionStartTime || now;
+        const runningElapsedSec = state.timerStatus === 'running' && state.timerStartedAtWallClock
+          ? state.timerAccumulatedElapsedSec + Math.floor((now - state.timerStartedAtWallClock) / 1000)
+          : null;
         let actualSec = oldStage.actualDurationSec;
         if (oldStage.timerType === 'stopwatch') {
-          if (state.timerStatus === 'running' && state.timerStartedAtWallClock) {
-            const additional = Math.floor((now - state.timerStartedAtWallClock) / 1000);
-            actualSec = state.timerAccumulatedElapsedSec + additional;
-          } else {
-            actualSec = state.timerAccumulatedElapsedSec || oldStage.actualDurationSec;
-          }
+          actualSec = runningElapsedSec ?? (state.timerAccumulatedElapsedSec || oldStage.actualDurationSec);
         } else if (oldStage.timerType === 'countdown') {
-          actualSec = oldStage.actualDurationSec;
+          // Skipped part-way: record the time it did run. Once finished, the recorded time stands.
+          actualSec = oldStage.flowPhase !== 'finished' && runningElapsedSec !== null ? runningElapsedSec : oldStage.actualDurationSec;
         } else {
           actualSec = Math.max(0, Math.floor((now - startedOld) / 1000));
         }
 
-        updatedStages[state.currentStageIndex] = {
-          ...oldStage,
-          status: 'completed',
-          flowPhase: 'finished',
-          startedAt: startedOld,
-          endedAt: now,
-          actualDurationSec: actualSec
-        };
+        // Going back leaves the later stage to be done again, so it isn't reported as completed
+        updatedStages[state.currentStageIndex] = isGoingBack
+          ? { ...oldStage, status: 'pending', flowPhase: 'ready', startedAt: startedOld, actualDurationSec: actualSec }
+          : {
+              ...oldStage,
+              status: 'completed',
+              flowPhase: 'finished',
+              startedAt: startedOld,
+              endedAt: now,
+              actualDurationSec: actualSec
+            };
 
         updatedStages[newIndex] = {
           ...nextStage,
@@ -928,15 +951,19 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
           activeDueNotice: null
         });
 
-        get().addAuditLog(
-          'STAGE_END',
-          `Stage completed: ${oldStage.title} (Actual: ${Math.floor(actualSec / 60)}m ${actualSec % 60}s, ${oldStage.timerType === 'stopwatch' ? 'Est' : 'Planned'}: ${Math.floor(oldStage.plannedDurationSec / 60)}m)`,
-          {
-            stageId: oldStage.id,
-            actualDurationSec: actualSec,
-            deltaSec: actualSec - oldStage.plannedDurationSec
-          }
-        );
+        if (isGoingBack) {
+          get().addAuditLog('NOTE', `Went back from ${oldStage.title} to ${nextStage.title}`, { stageId: oldStage.id, actualDurationSec: actualSec });
+        } else {
+          get().addAuditLog(
+            'STAGE_END',
+            `Stage completed: ${oldStage.title} (Actual: ${Math.floor(actualSec / 60)}m ${actualSec % 60}s, ${oldStage.timerType === 'stopwatch' ? 'Est' : 'Planned'}: ${Math.floor(oldStage.plannedDurationSec / 60)}m)`,
+            {
+              stageId: oldStage.id,
+              actualDurationSec: actualSec,
+              deltaSec: actualSec - oldStage.plannedDurationSec
+            }
+          );
+        }
 
         if (state.audioEnabled) {
           audioAlarm.playClick();
@@ -1190,24 +1217,24 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
       setStrikeOffset: (offset: number) => {
         const clamped = Math.max(0, Math.min(25, Math.round(offset * 10) / 10));
         const state = get();
-        const updatedStages = [...state.stages];
-        const waterPrep = updatedStages.find(s => s.id === 'WATER_PREP');
         const mashStep = state.recipe?.mash?.steps?.[0];
         const mashTemp = mashStep?.stepTemp || 65;
         const newStrikeTemp = Number((mashTemp + clamped).toFixed(1));
 
-        if (waterPrep) {
-          waterPrep.parameters.targetTemp = newStrikeTemp;
-          waterPrep.flow.endLog = `Strike offset +${clamped}°C (mash ${mashTemp}°C → strike ${newStrikeTemp}°C)`;
+        const updatedStages = state.stages.map(stage => stage.id !== 'WATER_PREP' ? stage : {
+          ...stage,
+          parameters: { ...stage.parameters, targetTemp: newStrikeTemp },
+          flow: { ...stage.flow, endLog: `Strike offset +${clamped}°C (mash ${mashTemp}°C → strike ${newStrikeTemp}°C)` },
           // Keep the "Strike temp" reminder's target in step with the offset
-          waterPrep.checklist = waterPrep.checklist.map(c =>
+          checklist: stage.checklist.map(c =>
             c.id === 'strike-temp' ? { ...c, label: `Strike temp ${newStrikeTemp}°C` } : c
-          );
-        }
+          )
+        });
 
-        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        // Remembered between sessions, best-effort: storage may be full or blocked
+        try {
           localStorage.setItem('brewmate_strike_offset', clamped.toString());
-        }
+        } catch {}
 
         set({
           strikeOffset: clamped,
@@ -1431,13 +1458,13 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
         if (!state) return;
 
         // Check if v14 legacy session exists in localStorage and migrate
-        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        try {
           const storedOffset = localStorage.getItem('brewmate_strike_offset');
           if (storedOffset) {
             const parsed = parseFloat(storedOffset);
             if (!isNaN(parsed)) state.strikeOffset = parsed;
           }
-        }
+        } catch {}
 
         // Wall-clock recovery upon rehydration
         if (state.timerStatus === 'running' && state.timerStartedAtWallClock) {
@@ -1454,14 +1481,14 @@ export const useBrewStore = create<BrewSessionState & BrewStoreActions>()(
 
         // Ensure all stages have valid flow definitions
         if (state.recipe && state.stages && state.stages.length > 0 && !state.stages[0]?.flow) {
-          const offset = state.strikeOffset || 10;
+          const offset = state.strikeOffset ?? initialStrikeOffset;
           state.stages = parseBrewfatherRecipe(state.recipe, offset);
         }
 
         // Migrate any legacy stage labels if present in persisted state
         if (state.stages && state.stages.length > 0) {
           // Water volumes are shown in whole litres (rounded up): tidy labels, pills and notes saved with decimals
-          const roundLitresInText = (text: string) => text.replace(/(d+.d+)L/g, (_, litres: string) => `${wholeLitres(Number(litres))}L`);
+          const roundLitresInText = (text: string) => text.replace(/(\d+\.\d+)L/g, (_, litres: string) => `${wholeLitres(Number(litres))}L`);
           for (const stage of state.stages) {
             if (stage.parameters.targetVolume !== undefined) {
               stage.parameters.targetVolume = wholeLitres(stage.parameters.targetVolume);

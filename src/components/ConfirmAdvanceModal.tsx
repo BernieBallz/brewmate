@@ -10,7 +10,7 @@ interface ConfirmAdvanceModalProps {
 }
 
 export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen, onClose, targetStageIndex = null }) => {
-  const { stages, currentStageIndex, nextStage, confirmFlowStage, goToStage, timerRemainingSec } = useBrewStore();
+  const { stages, currentStageIndex, nextStage, confirmFlowStage, goToStage, timerRemainingSec, timerStatus } = useBrewStore();
 
   if (!isOpen) return null;
 
@@ -19,7 +19,9 @@ export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen
   const nextStageObj = stages[isJump ? targetStageIndex : currentStageIndex + 1];
   const unconfirmedAdditions = getUnconfirmedAdditions(currentStage);
   const uncheckedReminders = getUncheckedReminders(currentStage);
-  const hasIncompleteItems = unconfirmedAdditions.length > 0 || uncheckedReminders.length > 0;
+  // Going back isn't finishing the stage: it comes round again, so its open items aren't a concern yet
+  const isGoingBack = isJump && targetStageIndex < currentStageIndex;
+  const hasIncompleteItems = !isGoingBack && (unconfirmedAdditions.length > 0 || uncheckedReminders.length > 0);
 
   const handleAdvance = () => {
     if (isJump) {
@@ -43,9 +45,15 @@ export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen
           <div className="flex items-center justify-center sm:justify-start space-x-2 text-sky-400 mb-1">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <h3 className="text-base sm:text-lg font-black text-white leading-tight truncate">
-              Complete "{currentStage.title}"?
+              {isGoingBack ? 'Leave' : 'Complete'} "{currentStage.title}"?
             </h3>
           </div>
+
+          {isGoingBack && timerStatus !== 'idle' && (
+            <p className="text-xs text-amber-300 mt-1">
+              Its timer will stop, and start again from the beginning when you come back to this stage.
+            </p>
+          )}
 
           {hasIncompleteItems && (
             <div className="mt-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/50 text-left space-y-2">
@@ -95,7 +103,7 @@ export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen
             </p>
           )}
 
-          {currentStage.timerType === 'stopwatch' && (
+          {currentStage.timerType === 'stopwatch' && !isGoingBack && (
             <div className="mt-1 flex items-center justify-center sm:justify-start space-x-1.5 text-xs font-mono text-cyan-300">
               <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800 font-bold">
                 ⏱️ Storing Run Time: {Math.floor(timerRemainingSec / 60)}m {timerRemainingSec % 60}s
@@ -123,7 +131,7 @@ export const ConfirmAdvanceModal: React.FC<ConfirmAdvanceModalProps> = ({ isOpen
             className="w-full py-3 sm:py-3.5 px-4 rounded-xl bg-sky-950/60 hover:bg-sky-900/70 active:bg-sky-800/80 text-sky-200 hover:text-white border border-sky-500/60 hover:border-sky-400 font-mono font-black text-xs sm:text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(56,189,248,0.25)] flex items-center justify-center space-x-2 transition-all touch-press active:scale-95"
           >
             <Check className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3] text-sky-400" />
-            <span>{hasIncompleteItems ? 'CONTINUE ANYWAY' : 'COMPLETE STAGE'}</span>
+            <span>{isGoingBack ? 'GO BACK' : hasIncompleteItems ? 'CONTINUE ANYWAY' : 'COMPLETE STAGE'}</span>
           </button>
 
           <button

@@ -4,6 +4,14 @@
 export const MAX_RECIPE_BYTES = 2 * 1024 * 1024; // real Brewfather exports are a few KB
 const MAX_REPORTED_PROBLEMS = 5;
 
+// Generous limits: nothing real comes close, but a value like 1e308 would turn a timer into Infinity
+const MAX_MINUTES = 100_000;
+const MAX_QUANTITY = 1_000_000;
+const MAX_NAME_LENGTH = 200;
+
+// Uses whose "time" schedules a timed addition. Other uses (e.g. dry hops, in days) don't drive a timer here.
+const SCHEDULED_USES = ['Boil', 'First Wort', 'Whirlpool', 'Hopstand', 'Aroma', 'Flameout'];
+
 type Json = Record<string, unknown>;
 
 // Water-adjustment fields the parser reads (volume plus the salts it lists as additions)
@@ -29,7 +37,14 @@ class ProblemList {
     if (!isAbsent(obj[key]) && typeof obj[key] !== 'string') this.add(`${where}: "${key}" must be text`);
   }
   requiredString(obj: Json, key: string, where: string) {
-    if (typeof obj[key] !== 'string' || (obj[key] as string).trim() === '') this.add(`${where}: "${key}" is missing`);
+    const value = obj[key];
+    if (typeof value !== 'string' || value.trim() === '') this.add(`${where}: "${key}" is missing`);
+    else if (value.length > MAX_NAME_LENGTH) this.add(`${where}: "${key}" is too long`);
+  }
+  // Only reports numbers outside the range; whether the value is a number at all is checked separately
+  inRange(obj: Json, key: string, where: string, min: number, max: number) {
+    const value = obj[key];
+    if (isFiniteNumber(value) && (value < min || value > max)) this.add(`${where}: "${key}" is out of range (${value})`);
   }
 }
 
@@ -105,29 +120,50 @@ export function validateRecipe(raw: unknown): string[] {
 
   problems.requiredString(raw, 'name', 'Recipe');
   ['author', 'type', 'notes'].forEach(k => problems.optionalString(raw, k, 'Recipe'));
-  ['batchSize', 'boilTime', 'boilSize', 'efficiency', 'mashEfficiency', 'og', 'fg', 'abv', 'ibu', 'color',
-    'preBoilGravity', 'postBoilGravity', 'primaryTemp', 'hopStandMinutes']
+
+  // The essentials a brew day can't be built without: any other JSON file with a "name" stops here
+  problems.requiredNumber(raw, 'batchSize', 'Recipe');
+  problems.requiredNumber(raw, 'boilTime', 'Recipe');
+  problems.inRange(raw, 'batchSize', 'Recipe', Number.MIN_VALUE, MAX_QUANTITY);
+  problems.inRange(raw, 'boilTime', 'Recipe', 1, MAX_MINUTES);
+  problems.inRange(raw, 'boilSize', 'Recipe', 0, MAX_QUANTITY);
+  problems.inRange(raw, 'hopStandMinutes', 'Recipe', 0, MAX_MINUTES);
+  problems.inRange(raw, 'hopstandMinutes', 'Recipe', 0, MAX_MINUTES);
+  if (!Array.isArray(raw.fermentables) || raw.fermentables.length === 0) problems.add('Recipe: has no fermentables');
+  if (!isObject(raw.mash) || !Array.isArray(raw.mash.steps) || raw.mash.steps.length === 0) problems.add('Recipe: has no mash steps');
+
+  ['boilSize', 'efficiency', 'mashEfficiency', 'og', 'fg', 'abv', 'ibu', 'color',
+    'preBoilGravity', 'postBoilGravity', 'primaryTemp', 'hopStandMinutes', 'hopstandMinutes', 'avgWeightedHopstandTemp']
     .forEach(k => problems.optionalNumber(raw, k, 'Recipe'));
+
+  const checkTiming = (item: Json, where: string) => {
+    problems.optionalNumber(item, 'time', where);
+    if (typeof item.use === 'string' && SCHEDULED_USES.includes(item.use)) problems.inRange(item, 'time', where, 0, MAX_MINUTES);
+  };
 
   checkList(problems, raw, 'fermentables', 'Fermentable', (f, where) => {
     problems.requiredString(f, 'name', where);
     problems.requiredNumber(f, 'amount', where);
+    problems.inRange(f, 'amount', where, 0, MAX_QUANTITY);
     problems.optionalString(f, 'use', where);
     problems.optionalString(f, 'type', where);
-    problems.optionalNumber(f, 'time', where);
+    checkTiming(f, where);
   });
   checkList(problems, raw, 'hops', 'Hop', (h, where) => {
     problems.requiredString(h, 'name', where);
     problems.requiredNumber(h, 'amount', where);
+    problems.inRange(h, 'amount', where, 0, MAX_QUANTITY);
     problems.optionalString(h, 'use', where);
     problems.optionalString(h, 'type', where);
-    ['time', 'ibu', 'alpha', 'temp'].forEach(k => problems.optionalNumber(h, k, where));
+    ['ibu', 'alpha', 'temp'].forEach(k => problems.optionalNumber(h, k, where));
+    checkTiming(h, where);
   });
   checkList(problems, raw, 'miscs', 'Misc', (m, where) => {
     problems.requiredString(m, 'name', where);
     problems.requiredNumber(m, 'amount', where);
+    problems.inRange(m, 'amount', where, 0, MAX_QUANTITY);
     ['use', 'unit', 'type', 'notes'].forEach(k => problems.optionalString(m, k, where));
-    problems.optionalNumber(m, 'time', where);
+    checkTiming(m, where);
   });
   checkList(problems, raw, 'yeasts', 'Yeast', (y, where) => {
     problems.requiredString(y, 'name', where);
@@ -143,12 +179,22 @@ export function validateRecipe(raw: unknown): string[] {
         problems.optionalString(s, 'name', where);
         problems.requiredNumber(s, 'stepTemp', where);
         problems.requiredNumber(s, 'stepTime', where);
+        problems.inRange(s, 'stepTemp', where, 0, 120);
+        problems.inRange(s, 'stepTime', where, 0, MAX_MINUTES);
       });
+      if (Array.isArray(raw.mash.steps) && raw.mash.steps.length > 0) {
+        const totalMinutes = raw.mash.steps.reduce((sum: number, s) => sum + (isObject(s) && isFiniteNumber(s.stepTime) ? s.stepTime : 0), 0);
+        if (totalMinutes <= 0) problems.add('Mash steps: the total mash time must be more than 0');
+      }
     }
   }
 
   checkNumberFields(problems, raw.data, ['strikeWaterAmount', 'spargeWaterAmount', 'totalWaterAmount', 'mashVolume', 'strikeTemp'], 'data');
-  checkNumberFields(problems, raw.equipment, ['batchSize', 'boilSize', 'boilTime', 'whirlpoolTime', 'hopstandTemperature', 'spargeTemperature'], 'equipment');
+  checkNumberFields(problems, raw.equipment, ['batchSize', 'boilSize', 'boilTime', 'whirlpoolTime', 'hopstandMinutes', 'hopstandTemperature', 'spargeTemperature'], 'equipment');
+  if (isObject(raw.equipment)) {
+    problems.inRange(raw.equipment, 'whirlpoolTime', 'equipment', 0, MAX_MINUTES);
+    problems.inRange(raw.equipment, 'hopstandMinutes', 'equipment', 0, MAX_MINUTES);
+  }
 
   if (!isAbsent(raw.water)) {
     if (!isObject(raw.water)) {

@@ -21,7 +21,8 @@ type LoadPhase =
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, onClose }) => {
-  const { loadRecipe } = useBrewStore();
+  const loadRecipe = useBrewStore(state => state.loadRecipe);
+  const hasSessionToReplace = useBrewStore(state => state.recipe !== null && state.sessionStartTime !== null);
   const [jsonInput, setJsonInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [phase, setPhase] = useState<LoadPhase>({ kind: 'idle' });
@@ -63,8 +64,8 @@ export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, on
       await wait(SUCCESS_HOLD_MS);
       setPhase({ kind: 'idle' });
       onClose();
-    } catch (err: any) {
-      reject(`This recipe couldn’t be turned into brew stages: ${err?.message || String(err)}`);
+    } catch (err) {
+      reject(`This recipe couldn’t be turned into brew stages: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -112,6 +113,7 @@ export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, on
           <button
             onClick={onClose}
             disabled={isBusy}
+            aria-label="Close"
             className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-all disabled:opacity-30"
           >
             <X className="w-5 h-5" />
@@ -134,6 +136,12 @@ export const RecipeUploadModal: React.FC<RecipeUploadModalProps> = ({ isOpen, on
           </div>
         ) : (
           <>
+            {hasSessionToReplace && (
+              <div className="mt-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/50 text-xs text-amber-200">
+                Loading a recipe replaces your current brew session and its log. Export the session report first if you want to keep it.
+              </div>
+            )}
+
             {errorMsg && (
               <div className="my-2 p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/50 text-xs font-mono text-rose-200 flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />

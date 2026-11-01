@@ -34,9 +34,6 @@ export default {
       },
       animation: {
         'stage-in': 'stage-in 320ms cubic-bezier(0.23, 1, 0.32, 1) both'
-      },
-      screens: {
-        'landscape-touch': { 'raw': '(orientation: landscape) and (max-height: 500px)' },
       }
     },
   },

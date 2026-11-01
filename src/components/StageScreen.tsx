@@ -186,7 +186,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           </span>
         )}
         {currentStage.parameters?.targetVolume !== undefined && currentStage.parameters.targetVolume > 0 && (
-          <span className="shrink-0 hidden min-[400px]:flex items-center space-x-1 text-xs font-mono font-bold text-cyan-400 bg-cyan-950/70 px-2 py-1 rounded border border-cyan-800/60">
+          <span className="shrink-0 hidden sm:flex items-center space-x-1 text-xs font-mono font-bold text-cyan-400 bg-cyan-950/70 px-2 py-1 rounded border border-cyan-800/60">
             <Droplets className="w-3.5 h-3.5" />
             <span>{currentStage.parameters.targetVolume}L</span>
           </span>

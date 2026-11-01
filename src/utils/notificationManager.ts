@@ -318,7 +318,7 @@ class NotificationManager {
     if (status === 'paused') {
       title = `⏸ ${timeDisplay} • ${stageTitle}`;
     } else if (status === 'finished') {
-      title = `✓ 00:00 • ${stageTitle} Complete`;
+      title = `✓ ${timeDisplay} • ${stageTitle} Complete`;
     } else if (timerType === 'stopwatch') {
       title = `⏱ ${timeDisplay} • ${stageTitle}`;
     }

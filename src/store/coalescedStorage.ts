@@ -30,15 +30,13 @@ export function createCoalescedStorage(
       timer = null;
     }
     if (pending.size === 0) return;
-    const storage = getStorage();
     const entries = Array.from(pending.entries());
     pending.clear();
-    if (!storage) return;
     for (const [key, value] of entries) {
       try {
-        storage.setItem(key, value);
+        getStorage()?.setItem(key, value);
       } catch (err) {
-        // Quota exceeded / private mode: persistence is best-effort
+        // Quota exceeded / private mode / storage blocked: persistence is best-effort
         console.warn('Persist write failed:', err);
       }
     }
@@ -63,7 +61,11 @@ export function createCoalescedStorage(
     },
     removeItem: (key) => {
       pending.delete(key);
-      getStorage()?.removeItem(key);
+      try {
+        getStorage()?.removeItem(key);
+      } catch (err) {
+        console.warn('Persist remove failed:', err);
+      }
     },
     flush
   };

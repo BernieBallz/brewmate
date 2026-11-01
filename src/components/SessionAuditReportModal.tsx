@@ -45,6 +45,7 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
 
   const [activeTab, setActiveTab] = useState<'summary' | 'json'>('summary');
   const [copiedType, setCopiedType] = useState<'none' | 'md' | 'json'>('none');
+  const [copyFailed, setCopyFailed] = useState(false);
 
   if (!isOpen) return null;
 
@@ -80,14 +81,20 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
     link.href = url;
     link.download = filename;
     link.click();
-    URL.revokeObjectURL(url);
+    // Revoked later: some mobile browsers are still starting the download when click() returns
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
   };
 
-  const handleCopy = (type: 'md' | 'json') => {
+  const handleCopy = async (type: 'md' | 'json') => {
     const text = type === 'json' ? generateTelemetryJson(exportOptions) : generateMarkdownReport(exportOptions);
-    navigator.clipboard.writeText(text);
-    setCopiedType(type);
-    setTimeout(() => setCopiedType('none'), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedType(type);
+      setCopyFailed(false);
+      setTimeout(() => setCopiedType('none'), 2000);
+    } catch {
+      setCopyFailed(true);
+    }
   };
 
   const handleDownloadTelemetryJson = () => {
@@ -355,6 +362,12 @@ export const SessionAuditReportModal: React.FC<SessionAuditReportModalProps> = (
             </div>
           )}
         </div>
+
+        {copyFailed && (
+          <p role="alert" className="pt-2 text-xs font-mono text-rose-300 shrink-0">
+            Couldn't copy to the clipboard. Use a download button instead.
+          </p>
+        )}
 
         {/* Action Footer (Responsive Multi-Format Export) */}
         <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">

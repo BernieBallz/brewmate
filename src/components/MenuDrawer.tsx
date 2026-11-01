@@ -187,11 +187,14 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                     key={stage.id}
                     type="button"
                     onClick={() => {
-                      // Jumping forward past unconfirmed additions or unticked reminders goes through the Complete Stage warning
-                      if (idx > currentStageIndex && hasIncompleteStageItems(stages[currentStageIndex])) {
-                        onConfirmJump(idx);
-                      } else {
-                        goToStage(idx);
+                      // Leaving a stage whose timer has started would lose that timer, and jumping forward past
+                      // unconfirmed additions or unticked reminders would skip them: both ask first
+                      if (idx !== currentStageIndex) {
+                        if (timerStatus !== 'idle' || (idx > currentStageIndex && hasIncompleteStageItems(stages[currentStageIndex]))) {
+                          onConfirmJump(idx);
+                        } else {
+                          goToStage(idx);
+                        }
                       }
                       closeDrawer();
                     }}
@@ -327,7 +330,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                     </span>
                   )}
                   <span className="block text-[11px] font-mono text-gray-500">
-                    Version {__APP_BUILD__.commit} · built {formatBuildTime(__APP_BUILD__.builtAt)}
+                    Version {__APP_BUILD__.version} ({__APP_BUILD__.commit}) · built {formatBuildTime(__APP_BUILD__.builtAt)}
                   </span>
                 </div>
               </div>

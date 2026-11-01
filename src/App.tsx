@@ -31,7 +31,11 @@ const shouldAutoOpenAlertSetup = (): boolean => {
 };
 
 export function App() {
-  const { tick, currentStageIndex, stages, reconcileTimerWithWallClock } = useBrewStore();
+  // Selected one by one: subscribing to the whole store would re-render the entire app on every timer second
+  const tick = useBrewStore(state => state.tick);
+  const reconcileTimerWithWallClock = useBrewStore(state => state.reconcileTimerWithWallClock);
+  const currentStageIndex = useBrewStore(state => state.currentStageIndex);
+  const stages = useBrewStore(state => state.stages);
   const isByStage = useBrewStore(state => state.flowMode === 'byStage');
 
   // By stage reading card and the menu's Session Log sheet
@@ -105,6 +109,9 @@ export function App() {
     window.addEventListener('visibilitychange', handleWakeUp);
     window.addEventListener('pageshow', handleWakeUp);
     window.addEventListener('focus', handleWakeUp);
+
+    // Also on opening: a saved session may be mid-timer or have "Keep screen on" set
+    handleWakeUp();
 
     return () => {
       window.removeEventListener('visibilitychange', handleWakeUp);

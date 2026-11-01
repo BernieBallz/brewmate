@@ -1,6 +1,10 @@
 import React from 'react';
 import { useBrewStore } from '../store/brewStore';
 
+// A target the recipe doesn't give is shown as a dash rather than made up
+const targetText = (target: number | undefined, decimals: number, suffix = ''): string =>
+  target ? `${target.toFixed(decimals)}${suffix} (target)` : '—';
+
 // Recorded telemetry summary and live activity timeline (Session Log tab, and the menu's Session Log sheet)
 export const SessionLogPanel: React.FC = () => {
   const stages = useBrewStore(state => state.stages);
@@ -25,7 +29,7 @@ export const SessionLogPanel: React.FC = () => {
             <span className="text-amber-400 font-bold">
               {measurements.strikeTempActual !== undefined
                 ? `${measurements.strikeTempActual.toFixed(1)}°C`
-                : `${(stages.find(s => s.id === 'WATER_PREP')?.parameters.targetTemp ?? 71.5).toFixed(1)}°C (target)`}
+                : targetText(stages.find(s => s.id === 'WATER_PREP')?.parameters.targetTemp, 1, '°C')}
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
@@ -33,7 +37,7 @@ export const SessionLogPanel: React.FC = () => {
             <span className="text-amber-400 font-bold">
               {measurements.mashInTempActual !== undefined
                 ? `${measurements.mashInTempActual.toFixed(1)}°C`
-                : `${(recipe?.mash?.steps?.[0]?.stepTemp ?? 65).toFixed(1)}°C (target)`}
+                : targetText(recipe?.mash?.steps?.[0]?.stepTemp, 1, '°C')}
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
@@ -47,7 +51,7 @@ export const SessionLogPanel: React.FC = () => {
             <span className="text-emerald-400 font-bold">
               {measurements.preBoilGravityActual !== undefined
                 ? `${measurements.preBoilGravityActual.toFixed(3)}`
-                : `${recipe?.preBoilGravity ? recipe.preBoilGravity.toFixed(3) : '1.039'} (target)`}
+                : targetText(recipe?.preBoilGravity, 3)}
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
@@ -55,7 +59,7 @@ export const SessionLogPanel: React.FC = () => {
             <span className="text-purple-400 font-bold">
               {measurements.postBoilGravityActual !== undefined
                 ? `${measurements.postBoilGravityActual.toFixed(3)}`
-                : `${recipe?.og ? recipe.og.toFixed(3) : '1.045'} (target)`}
+                : targetText(recipe?.og, 3)}
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">
@@ -63,7 +67,7 @@ export const SessionLogPanel: React.FC = () => {
             <span className="text-amber-400 font-bold">
               {measurements.knockoutTempActual !== undefined
                 ? `${measurements.knockoutTempActual.toFixed(1)}°C`
-                : `${(recipe?.primaryTemp ?? 19).toFixed(1)}°C (target)`}
+                : targetText(recipe?.primaryTemp, 1, '°C')}
             </span>
           </div>
           <div className="flex justify-between bg-slate-900/90 px-2 py-1 rounded border border-slate-800">

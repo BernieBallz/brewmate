@@ -39,8 +39,8 @@ export const DueBanner: React.FC<DueBannerProps> = ({ onRecord }) => {
             <span className="block text-[11px] font-mono font-black uppercase tracking-wider opacity-80">
               {notice.title} · due now
             </span>
-            {notice.lines.map(line => (
-              <span key={line} className="block text-base font-black leading-snug">
+            {notice.lines.map((line, idx) => (
+              <span key={idx} className="block text-base font-black leading-snug">
                 {line}
               </span>
             ))}
