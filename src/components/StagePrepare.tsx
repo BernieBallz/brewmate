@@ -172,8 +172,8 @@ export const StagePrepare: React.FC<StagePrepareProps> = ({ onConfirmAdvance }) 
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-gray-100 touch-press"
                     >
                       {item.checked
-                        ? <Check className="w-4 h-4 shrink-0 text-emerald-500" />
-                        : <span className="w-4 h-4 shrink-0 rounded-full border border-slate-600" />}
+                        ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                        : <CheckCircle2 className="w-4 h-4 shrink-0 text-slate-600" />}
                       <span className={`min-w-0 flex-1 font-semibold ${item.checked ? 'text-gray-500 line-through' : ''}`}>{item.label}</span>
                       {item.triggerRemainingSec !== undefined && (
                         <span className="shrink-0 text-[11px] font-mono font-bold text-cyan-300">

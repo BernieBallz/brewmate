@@ -8,7 +8,7 @@ import { StageActions } from './StageActions';
 import { StagePrepare } from './StagePrepare';
 import { useFullscreen } from '../hooks/useFullscreen';
 import { useAppUpdateReady } from '../hooks/useAppLifecycle';
-import { Menu, Thermometer, Droplets, CheckCircle2, Check, Gauge, Maximize, Minimize } from 'lucide-react';
+import { Menu, Thermometer, Droplets, CheckCircle2, Gauge, Maximize, Minimize } from 'lucide-react';
 
 interface StageScreenProps {
   onOpenMenu: () => void;
@@ -334,9 +334,9 @@ export const StageScreen: React.FC<StageScreenProps> = ({
                   }`} />
                 </span>
               ) : item.done ? (
-                <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
               ) : (
-                <span className="w-4 h-4 shrink-0 rounded-full border border-slate-600" />
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-slate-600" />
               )}
               {item.when && (
                 <span className={`shrink-0 w-[4.5rem] text-[11px] font-mono font-bold uppercase ${
