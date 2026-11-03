@@ -8,12 +8,15 @@ import {
   ArrowRight,
   CheckCircle2,
   AlertTriangle,
-  FileText
+  FileText,
+  ScrollText
 } from 'lucide-react';
 
 interface StageActionsProps {
   onConfirmAdvance: () => void;
   onOpenReportModal?: () => void;
+  // Session finished: the log sits beside the report so neither needs the menu
+  onOpenSessionLog?: () => void;
   // 'large' gives taller buttons and bigger type for the full-screen By stage view
   size?: 'normal' | 'large';
   // By stage: Next opens the Done card when readings are due
@@ -24,6 +27,7 @@ interface StageActionsProps {
 export const StageActions: React.FC<StageActionsProps> = ({
   onConfirmAdvance,
   onOpenReportModal,
+  onOpenSessionLog,
   size = 'normal',
   onOpenDoneCard
 }) => {
@@ -60,15 +64,27 @@ export const StageActions: React.FC<StageActionsProps> = ({
 
   return (
     <>
-      {/* Case 0: Session Finished -> Prominent Telemetry & Audit Report button */}
+      {/* Case 0: Session Finished -> Prominent Telemetry & Audit Report button, with the session log beside it */}
       {isSessionDone ? (
-        <button
-          onClick={() => onOpenReportModal?.()}
-          className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-wider uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-[0_0_25px_rgba(245,158,11,0.4)]`}
-        >
-          <FileText className="w-5 h-5 stroke-[2.5]" />
-          <span>VIEW SESSION REPORT</span>
-        </button>
+        <div className="space-y-1.5">
+          <button
+            onClick={() => onOpenReportModal?.()}
+            className={`w-full ${primarySize} rounded-xl font-mono font-black tracking-wider uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-[0_0_25px_rgba(245,158,11,0.4)]`}
+          >
+            <FileText className="w-5 h-5 stroke-[2.5]" />
+            <span>VIEW SESSION REPORT</span>
+          </button>
+          {onOpenSessionLog && (
+            <button
+              onClick={onOpenSessionLog}
+              className={`w-full ${secondarySize} rounded-xl font-mono font-black tracking-wider uppercase transition-all touch-press flex items-center justify-center space-x-2 border bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-slate-200 border-slate-700`}
+            >
+              <ScrollText className="w-4 h-4" />
+              <span>Session log</span>
+            </button>
+          )}
+          <p className="text-center text-[11px] font-mono text-gray-500">Telemetry downloads are in the report</p>
+        </div>
       ) : flow.kind === 'confirm' ? (
         /* Case 1: Confirm Stages (Single dominant button) */
         <button

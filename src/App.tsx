@@ -177,6 +177,7 @@ export function App() {
             onOpenMenu={() => setIsMenuDrawerOpen(true)}
             onConfirmAdvance={() => openAdvanceModal()}
             onOpenReportModal={() => setIsReportModalOpen(true)}
+            onOpenSessionLog={() => setIsSessionLogOpen(true)}
             onOpenDoneCard={() => setDoneCardMode('finish')}
             onRecordReading={() => setDoneCardMode('record')}
           />
@@ -184,11 +185,13 @@ export function App() {
           <LandscapeHUD
             onConfirmAdvance={() => openAdvanceModal()}
             onOpenReportModal={() => setIsReportModalOpen(true)}
+            onOpenSessionLog={() => setIsSessionLogOpen(true)}
           />
         ) : (
           <PortraitHUD
             onConfirmAdvance={() => openAdvanceModal()}
             onOpenReportModal={() => setIsReportModalOpen(true)}
+            onOpenSessionLog={() => setIsSessionLogOpen(true)}
           />
         )}
       </main>

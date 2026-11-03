@@ -3,6 +3,7 @@ import { useBrewStore } from '../store/brewStore';
 import { useStageTimerView, formatTime, formatWaitCountdown } from '../hooks/useStageTimerView';
 import { CountdownProgressBar } from './CountdownProgressBar';
 import { StageActions } from './StageActions';
+import { BrewCompleteCelebration } from './BrewCompleteCelebration';
 import { StrikeOffsetControl } from './StrikeOffsetControl';
 import {
   Thermometer,
@@ -14,11 +15,13 @@ import {
 interface TimerCockpitProps {
   onConfirmAdvance: () => void;
   onOpenReportModal?: () => void;
+  onOpenSessionLog?: () => void;
 }
 
 export const TimerCockpit: React.FC<TimerCockpitProps> = ({
   onConfirmAdvance,
-  onOpenReportModal
+  onOpenReportModal,
+  onOpenSessionLog
 }) => {
   const toggleChecklistItem = useBrewStore(state => state.toggleChecklistItem);
 
@@ -80,16 +83,8 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center py-1.5 w-full">
         {/* Case 0: Session Finished State */}
         {isSessionDone ? (
-          <div className="flex flex-col items-center justify-center py-1 animate-in fade-in duration-300">
-            <div className="w-12 h-12 rounded-full bg-emerald-950/90 border-2 border-emerald-500/80 flex items-center justify-center text-emerald-400 mb-1.5 shadow-[0_0_25px_rgba(16,185,129,0.4)]">
-              <CheckCircle2 className="w-7 h-7" />
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-white font-mono tracking-wider uppercase">
-              Brew Session Complete!
-            </h3>
-            <p className="text-[11px] text-emerald-400 font-mono mt-0.5">
-              All {stages.length} stages finished • Full telemetry logged
-            </p>
+          <div className="py-1">
+            <BrewCompleteCelebration compact subtitle={`All ${stages.length} stages finished • Full telemetry logged`} />
           </div>
         ) : flow.kind === 'countdown' ? (
           /* Case A: Countdown Stages (Mash Rest, Boil, Whirlpool) - Full Card-Width Digits + Milestone Timeline */
@@ -247,7 +242,7 @@ export const TimerCockpit: React.FC<TimerCockpitProps> = ({
 
       {/* 3. Primary Flow-First Action Controls (Sticky at Bottom, NEVER Pushed Off-Screen) */}
       <div className="shrink-0 sticky bottom-0 bg-slate-900/95 pt-1.5 pb-0.5 z-10 space-y-1.5">
-        <StageActions onConfirmAdvance={onConfirmAdvance} onOpenReportModal={onOpenReportModal} />
+        <StageActions onConfirmAdvance={onConfirmAdvance} onOpenReportModal={onOpenReportModal} onOpenSessionLog={onOpenSessionLog} />
       </div>
     </div>
   );

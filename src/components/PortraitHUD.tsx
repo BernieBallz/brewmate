@@ -6,9 +6,10 @@ import { StageFeed } from './StageFeed';
 interface PortraitHUDProps {
   onConfirmAdvance: () => void;
   onOpenReportModal?: () => void;
+  onOpenSessionLog?: () => void;
 }
 
-export const PortraitHUD: React.FC<PortraitHUDProps> = ({ onConfirmAdvance, onOpenReportModal }) => {
+export const PortraitHUD: React.FC<PortraitHUDProps> = ({ onConfirmAdvance, onOpenReportModal, onOpenSessionLog }) => {
   const currentStageIndex = useBrewStore(state => state.currentStageIndex);
 
   // Bring the new stage's timer, tabs and first reminders back into view on stage change
@@ -21,7 +22,7 @@ export const PortraitHUD: React.FC<PortraitHUDProps> = ({ onConfirmAdvance, onOp
     <div ref={scrollRef} className="flex-1 min-h-0 flex flex-col p-2 pb-6 space-y-2 overflow-y-auto">
       {/* Top Section: Timer Cockpit */}
       <div className="shrink-0">
-        <TimerCockpit onConfirmAdvance={onConfirmAdvance} onOpenReportModal={onOpenReportModal} />
+        <TimerCockpit onConfirmAdvance={onConfirmAdvance} onOpenReportModal={onOpenReportModal} onOpenSessionLog={onOpenSessionLog} />
       </div>
 
       {/* Bottom Section: Stage Feed */}

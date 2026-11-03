@@ -5,6 +5,7 @@ import { getAdditionBadge } from '../utils/additionDisplay';
 import { getReadingShortName } from '../utils/measurementSteppers';
 import { CountdownProgressBar } from './CountdownProgressBar';
 import { StageActions } from './StageActions';
+import { BrewCompleteCelebration } from './BrewCompleteCelebration';
 import { StagePrepare } from './StagePrepare';
 import { useFullscreen } from '../hooks/useFullscreen';
 import { useAppUpdateReady } from '../hooks/useAppLifecycle';
@@ -14,6 +15,7 @@ interface StageScreenProps {
   onOpenMenu: () => void;
   onConfirmAdvance: () => void;
   onOpenReportModal: () => void;
+  onOpenSessionLog: () => void;
   onOpenDoneCard: () => void;
   onRecordReading: () => void;
 }
@@ -44,6 +46,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
   onOpenMenu,
   onConfirmAdvance,
   onOpenReportModal,
+  onOpenSessionLog,
   onOpenDoneCard,
   onRecordReading
 }) => {
@@ -239,13 +242,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
         className="flex-1 min-h-[9rem] flex flex-col items-center justify-center text-center motion-safe:animate-stage-in"
       >
         {isSessionDone ? (
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-emerald-950/90 border-2 border-emerald-500/80 flex items-center justify-center text-emerald-400 mb-2 shadow-[0_0_25px_rgba(16,185,129,0.4)]">
-              <CheckCircle2 className="w-9 h-9" />
-            </div>
-            <h2 className="text-xl font-black text-white font-mono tracking-wider uppercase">Brew Session Complete!</h2>
-            <p className="text-xs text-emerald-400 font-mono mt-1">All {stages.length} stages finished</p>
-          </div>
+          <BrewCompleteCelebration subtitle={`All ${stages.length} stages finished`} />
         ) : isCountdown ? (
           <>
             <div
@@ -367,6 +364,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           size="large"
           onConfirmAdvance={onConfirmAdvance}
           onOpenReportModal={onOpenReportModal}
+          onOpenSessionLog={onOpenSessionLog}
           onOpenDoneCard={onOpenDoneCard}
         />
       </div>
