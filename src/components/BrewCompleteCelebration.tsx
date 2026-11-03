@@ -22,7 +22,8 @@ interface BrewCompleteCelebrationProps {
   compact?: boolean;
 }
 
-// The finished screen in both flows: the pint spins in like a retro sprite alongside the completion chime
+// The finished screen in both flows: the pint spins in like a retro sprite alongside the completion chime.
+// Plays even when the device asks for reduced motion: it's short, and a deliberate choice for this app
 export const BrewCompleteCelebration: React.FC<BrewCompleteCelebrationProps> = ({ subtitle, compact = false }) => {
   const finishedAt = useBrewStore(state => state.finishedAt);
   const [celebrate] = useState(() => finishedAt !== null && Date.now() - finishedAt < CELEBRATE_WINDOW_MS);
@@ -32,7 +33,7 @@ export const BrewCompleteCelebration: React.FC<BrewCompleteCelebrationProps> = (
       <div className={`relative ${compact ? 'mb-1.5' : 'mb-2'}`}>
         <div
           className={`${compact ? 'w-12 h-12' : 'w-16 h-16'} rounded-2xl bg-emerald-950/90 border-2 border-emerald-500/80 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.4)] ${
-            celebrate ? 'motion-safe:animate-pixel-spin' : ''
+            celebrate ? 'animate-pixel-spin' : ''
           }`}
         >
           <PixelBeerIcon className="w-8 h-8" />
@@ -41,14 +42,14 @@ export const BrewCompleteCelebration: React.FC<BrewCompleteCelebrationProps> = (
         {celebrate && SPARKS.map(s => (
           <span
             key={`${s.dx},${s.dy}`}
-            className={`absolute left-1/2 top-1/2 -ml-1 -mt-1 w-2 h-2 opacity-0 pointer-events-none motion-safe:animate-pixel-burst motion-reduce:hidden ${s.color}`}
+            className={`absolute left-1/2 top-1/2 -ml-1 -mt-1 w-2 h-2 opacity-0 pointer-events-none animate-pixel-burst ${s.color}`}
             style={{ '--dx': `${s.dx}px`, '--dy': `${s.dy}px` } as React.CSSProperties}
           />
         ))}
       </div>
       <h2
         className={`${compact ? 'text-base sm:text-lg' : 'text-xl'} font-black text-white font-mono tracking-wider uppercase ${
-          celebrate ? 'motion-safe:animate-pixel-blink' : ''
+          celebrate ? 'animate-pixel-blink' : ''
         }`}
       >
         Brew Session Complete!
