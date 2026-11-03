@@ -1,5 +1,6 @@
 import React from 'react';
-import { Flame, FolderOpen } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
+import { PixelBeerIcon } from './PixelBeerIcon';
 
 interface WelcomeScreenProps {
   onLoadRecipe: () => void;
@@ -10,7 +11,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLoadRecipe }) =>
   <div className="flex-1 min-h-0 flex items-center justify-center p-6 select-none">
     <div className="w-full max-w-sm text-center flex flex-col items-center">
       <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-brew-amber flex items-center justify-center mb-4 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
-        <Flame className="w-7 h-7" />
+        <PixelBeerIcon className="w-8 h-8" />
       </div>
 
       <h1 className="font-mono font-black text-xl tracking-widest text-white uppercase">BrewMate</h1>
